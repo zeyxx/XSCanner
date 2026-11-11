@@ -1,0 +1,22 @@
+{
+  "name": "xscanner",
+  "version": "0.1.0",
+  "description": "Transparent, authenticity-adjusted, contract-address-keyed, minute-resolution attention measure for fresh Solana memecoins",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
