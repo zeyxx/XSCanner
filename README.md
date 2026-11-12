@@ -10,17 +10,20 @@ Not wired. Not a second Solana listener. Not TokenSage. Not a trading bot.
 
 ## Status
 
-`src/` was removed. The code encoded a formula his brief does not describe, a cohort number without a universe, and a call site that does not exist in his tree.
+Observed 2026-11-12 (`npm ci`, `npx vitest run`):
 
-Nothing under `src/` is to be restored as-is. The next code starts from the docs, not from that draft.
+- `src/measure.ts` exists (one function, `measureAttention`). `tests/measure.test.ts`: 3 tests pass.
+- `tests/adapters.test.ts` fails. It imports `src/adapters/x-official.js` and `src/adapters/solana-rpc.js`, which are not in the tree. That test is a draft for deleted code.
+- No server, no schema, no wiring into TrenchScanner or TokenSage. Measured nothing about predictive value.
 
-There is no server, no schema, and no test suite in this tree.
+The earlier draft under `src/domain/` was removed. It encoded a formula his brief does not describe, a cohort number without a universe, and a call site that does not exist in his tree. Do not restore it as-is.
 
 ## Docs
 
 - `docs/INTEGRATION.md` — what was observed in his code, the open holes, what is not claimed
 - `docs/GUIDELINE.md` — his standalone brief
 - `docs/RESEARCH.md` — his evidence notes
+- `docs/PROTOCOL.md` — comparison protocol (draft, not validated, nothing run)
 - `docs/SCORING.md` — his target formula, and why the deleted code was not that formula
 - `docs/DECISIONS.md` — decisions actually taken (language, where scoring parameters live)
 - `docs/PROVIDERS.md` — notes on the three X providers, including bugs found in the deleted adapters
