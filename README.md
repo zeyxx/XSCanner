@@ -10,11 +10,14 @@ Not wired. Not a second Solana listener. Not TokenSage. Not a trading bot.
 
 ## Status
 
-Observed 2026-11-12 (`npm ci`, `npx vitest run`):
+Observed 2026-11-12 (`npx vitest run`, `npx tsc --noEmit`):
 
-- `src/measure.ts` exists (one function, `measureAttention`). `tests/measure.test.ts`: 3 tests pass.
-- `tests/adapters.test.ts` fails. It imports `src/adapters/x-official.js` and `src/adapters/solana-rpc.js`, which are not in the tree. That test is a draft for deleted code.
-- No server, no schema, no wiring into TrenchScanner or TokenSage. Measured nothing about predictive value.
+- `src/measure.ts`: one function, `measureAttention`. Not connected to anything.
+- `src/collect/`: pure helpers for a local alert log (`record.ts`) and its summary (`summary.ts`).
+- `scripts/collect-alerts.ts`: connects to TrenchScanner's subscriber Model Alert websocket with `MODEL_ALERT_KEY` from `.env` and appends each alert to `data/alerts-YYYY-MM-DD.jsonl` (git-ignored). Live connection verified once on 2026-11-12. No replay exists on the server, so downtime leaves gaps.
+- `scripts/summarize-alerts.ts` (`npm run summary`): counts notifications, tokens, models and delivery delay.
+- Tests: 10 pass. The old `tests/adapters.test.ts` imported deleted files and was removed.
+- No server, no schema, no wiring into TokenSage. No measure of predictive value.
 
 The earlier draft under `src/domain/` was removed. It encoded a formula his brief does not describe, a cohort number without a universe, and a call site that does not exist in his tree. Do not restore it as-is.
 
