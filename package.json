@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test": "vitest run",
-    "collect": "node --env-file=.env --import tsx scripts/collect-alerts.ts"
+    "collect": "node --env-file=.env --import tsx scripts/collect-alerts.ts",
+    "summary": "node --import tsx scripts/summarize-alerts.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.0",
