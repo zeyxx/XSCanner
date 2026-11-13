@@ -41,8 +41,12 @@
 ## GetXAPI
 
 - **Dashboard**: `https://www.getxapi.com/dashboard`
+- **Endpoint**: `GET https://api.getxapi.com/twitter/tweet/advanced_search`
+- **Auth**: `Authorization: Bearer <key>`
+- **Query params**: `q` (required, supports X search operators), `product` (`Latest` or `Top`, default `Latest`), `cursor` (pagination)
+- **Response**: `{ query, tweet_count, has_more, next_cursor, tweets: [{ id, text, createdAt, likeCount, retweetCount, replyCount, quoteCount, author: { id, userName, followers, ... } }] }` (~20 tweets per page)
 - **Pricing (web search summary 2026-11-13, [verify])**: Pay-per-call, no monthly subscription required. Standard read calls ~$0.001 per call (~20 tweets per page, ~$0.05/1k tweets). Free trial credit (~$0.10) reported.
-- **Status**: Candidate third-party provider, not tested or wired.
+- **Status**: Adapter & 1-call probe ready (`src/adapters/getxapi.ts`, `scripts/probe-getxapi.ts`). Not yet run live.
 - **ToS**: Third-party service (does not require an official X developer account). Note `docs/GUIDELINE.md` §4.1: Official X API is the only ToS-clean route; third-party providers carry scraping / supply risk.
 
 ## Bugs Found & Fixed
