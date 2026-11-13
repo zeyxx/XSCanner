@@ -11,7 +11,11 @@ import { computeReturns, type Candle } from "../src/prices/returns.js";
  */
 const minAgeMin = Number(process.argv[process.argv.indexOf("--min-age") + 1]) || 65;
 const PRICES_FILE = "data/prices.jsonl";
-const SPACING_MS = 2_500;
+/** Starts at 4 s between calls; doubles (max 60 s) after a 429 and eases back after successes. */
+let spacingMs = 4_000;
+const MIN_SPACING_MS = 4_000;
+const MAX_SPACING_MS = 60_000;
+const MAX_RETRIES = 4;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type First = { mint: string; symbol: string | null; t0: string; alertPriceUsd: number | null };
@@ -45,9 +49,21 @@ function done(): Set<string> {
 }
 
 async function getJson(url: string): Promise<unknown> {
-  const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${new URL(url).host}`);
-  return res.json();
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
+    if (res.status === 429 && attempt < MAX_RETRIES) {
+      // Honor the provider's limit: wait what it asks (else 60 s), then slow down our own pace.
+      const asked = Number(res.headers.get("retry-after"));
+      const waitMs = Number.isFinite(asked) && asked > 0 ? asked * 1000 : 60_000;
+      spacingMs = Math.min(MAX_SPACING_MS, spacingMs * 2);
+      console.log(`429 from ${new URL(url).host}, waiting ${Math.round(waitMs / 1000)} s, spacing now ${spacingMs / 1000} s`);
+      await sleep(waitMs);
+      continue;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${new URL(url).host}`);
+    spacingMs = Math.max(MIN_SPACING_MS, Math.floor(spacingMs * 0.9));
+    return res.json();
+  }
 }
 
 type Pair = { pairAddress: string; dexId: string; quoteToken?: { symbol?: string }; liquidity?: { usd?: number } };
@@ -74,7 +90,7 @@ for (const t of todo) {
       console.log(t.symbol ?? t.mint, "no pool found");
       continue;
     }
-    await sleep(SPACING_MS);
+    await sleep(spacingMs);
     const url =
       `https://api.geckoterminal.com/api/v2/networks/solana/pools/${pair.pairAddress}/ohlcv/minute` +
       `?aggregate=1&limit=70&currency=usd&before_timestamp=${t0Sec + 3660}`;
@@ -102,5 +118,5 @@ for (const t of todo) {
   } catch (err) {
     console.log(t.symbol ?? t.mint, "failed:", String(err));
   }
-  await sleep(SPACING_MS);
+  await sleep(spacingMs);
 }
