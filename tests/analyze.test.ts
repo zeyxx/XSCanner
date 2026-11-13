@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyze, bucketOf, dist, latestComplete, type PriceRow } from "../src/prices/analyze.js";
+import { analyze, bucketOf, dist, latestComplete, settledMints, type PriceRow } from "../src/prices/analyze.js";
 
 const row = (mint: string, fetchedAt: string, complete: boolean, r60: number | null, quote = "SOL"): PriceRow => ({
   mint, quote, fetchedAt,
@@ -23,5 +23,16 @@ describe("analyze", () => {
     expect(Object.keys(res.byQuote)).toEqual(["SOL", "other quote"]);
     expect(Object.keys(res.byModels)).toEqual(["1 model", "4+ models"]);
     expect(res.mints).toBe(2);
+  });
+  it("settles a mint once complete or after 3 incomplete attempts", () => {
+    const s = settledMints([
+      row("done", "1", true, 10),
+      row("try2", "1", false, null),
+      row("try2", "2", false, null),
+      row("try3", "1", false, null),
+      row("try3", "2", false, null),
+      row("try3", "3", false, null),
+    ]);
+    expect([...s].sort()).toEqual(["done", "try3"]);
   });
 });

@@ -1,5 +1,6 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import type { AlertRecord } from "../src/collect/record.js";
+import { settledMints } from "../src/prices/analyze.js";
 import { computeReturns, type Candle } from "../src/prices/returns.js";
 
 /**
@@ -38,14 +39,12 @@ function firstAlerts(): First[] {
 }
 
 function done(): Set<string> {
-  const out = new Set<string>();
-  if (!existsSync(PRICES_FILE)) return out;
-  for (const line of readFileSync(PRICES_FILE, "utf8").split("\n")) {
-    if (!line.trim()) continue;
-    const r = JSON.parse(line) as { mint: string; returns: { complete: boolean } };
-    if (r.returns.complete) out.add(r.mint);
-  }
-  return out;
+  if (!existsSync(PRICES_FILE)) return new Set();
+  const rows = readFileSync(PRICES_FILE, "utf8")
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l) as { mint: string; returns: { complete: boolean } });
+  return settledMints(rows);
 }
 
 async function getJson(url: string): Promise<unknown> {
@@ -87,7 +86,23 @@ for (const t of todo) {
     const t0Sec = Math.floor(Date.parse(t.t0) / 1000);
     const pair = await resolvePool(t.mint);
     if (!pair) {
+      appendFileSync(
+        PRICES_FILE,
+        JSON.stringify({
+          mint: t.mint,
+          symbol: t.symbol,
+          t0: t.t0,
+          pool: null,
+          dex: null,
+          quote: null,
+          currency: "usd",
+          alertPriceUsd: t.alertPriceUsd,
+          fetchedAt: new Date().toISOString(),
+          returns: computeReturns([], t0Sec, nowSec),
+        }) + "\n",
+      );
       console.log(t.symbol ?? t.mint, "no pool found");
+      await sleep(spacingMs);
       continue;
     }
     await sleep(spacingMs);

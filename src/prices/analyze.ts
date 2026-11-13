@@ -5,6 +5,27 @@ export type PriceRow = {
   returns: { complete: boolean; atMin: Record<string, number | null>; peak60Pct: number | null; trough60Pct: number | null };
 };
 
+export const MAX_MINT_ATTEMPTS = 3;
+
+/** Mints with a complete row, or that have already been attempted at least `maxAttempts` times. */
+export function settledMints(
+  rows: readonly { mint: string; returns: { complete: boolean } }[],
+  maxAttempts = MAX_MINT_ATTEMPTS,
+): Set<string> {
+  const out = new Set<string>();
+  const attempts = new Map<string, number>();
+  for (const r of rows) {
+    if (r.returns.complete) {
+      out.add(r.mint);
+      continue;
+    }
+    const n = (attempts.get(r.mint) ?? 0) + 1;
+    attempts.set(r.mint, n);
+    if (n >= maxAttempts) out.add(r.mint);
+  }
+  return out;
+}
+
 export type Dist = { n: number; median: number; mean: number; shareUp: number };
 
 /** Latest row per mint, complete rows only. A later incomplete row never replaces a complete one. */
