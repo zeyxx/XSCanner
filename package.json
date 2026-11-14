@@ -10,7 +10,8 @@
     "summary": "node --import tsx scripts/summarize-alerts.ts",
     "prices": "node --import tsx scripts/track-prices.ts",
     "analyze": "node --import tsx scripts/analyze-prices.ts",
-    "probe:getxapi": "node --env-file=.env --import tsx scripts/probe-getxapi.ts"
+    "probe:getxapi": "node --env-file=.env --import tsx scripts/probe-getxapi.ts",
+    "compare:x": "node --env-file=.env --import tsx scripts/compare-x.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.0",
