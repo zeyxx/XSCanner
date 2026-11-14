@@ -119,3 +119,27 @@ Query: `9zB5wRarXMj86MymwLumSKA1Dx35zPqqKfcZtK1Spump`. Granularity: minute. Wind
 - Empty minutes are returned as `tweet_count: 0`. A quiet query does not shrink the page.
 
 Balance immediately before: 4.99. Balance after this call: 4.98. The usage read between them did not move the balance on the previous pair of reads (E5, then the read just before this call, both 4.99). The one-cent drop belongs to this counts request, at the precision of the balance field. The docs say $0.005 per request. A half-cent cannot be read on a cent field. This does not prove the price is $0.01.
+
+## E7 — GetXAPI vs Official X counts on 30 collected mints
+
+Date: 2026-11-14.
+Script: `npm run compare:x` (`data/compare-x.jsonl`, joined with `data/prices.jsonl`).
+Credits spent (verified by user on provider dashboards):
+- Official X `GET /2/tweets/counts/recent`: 30 requests = **$0.15** (**$0.005/request**, confirms E1).
+- GetXAPI `GET /twitter/tweet/advanced_search` (1 page, `product=Latest`): **$0.001/request** (30 requests = **$0.03**).
+
+Coverage (`n = 30` mints with complete 60m GeckoTerminal price paths):
+- Any mention of mint address (before or after `t0`): Official **20/30 (67%)**, GetXAPI **17/30 (57%)**.
+- Mention strictly before `t0`: Official **9/30 (30%)**, GetXAPI **5/30 (17%)**.
+- Volume match: exact match on 19/30 mints; GetXAPI returned strictly fewer tweets than Official on 11/30 mints (e.g. `WATER` 0 vs 8, `DESU` 2 vs 10, `BOT` 1 vs 6).
+
+Descriptive returns by pre-`t0` presence (exploratory `n = 30`, no fees/slippage/liquidity):
+- Official `pre > 0` (`n = 9`): `+5m` median +36.6% (67% up), `+15m` -51.1%, `+60m` -53.4% (0% up), `peak60` median +123.3%.
+- Official `pre = 0` (`n = 21`): `+5m` median -15.0% (38% up), `+15m` -20.6%, `+60m` -34.8% (19% up), `peak60` median +175.9%.
+- GetXAPI `pre > 0` (`n = 5`): `+5m` median -8.7%, `+60m` -46.5% (0% up), `peak60` median +123.3%.
+- GetXAPI `pre = 0` (`n = 25`): `+5m` median -7.5%, `+60m` -43.6% (16% up), `peak60` median +175.9%.
+
+What this does not answer:
+- Statistical significance (`n = 30` is too small).
+- Discussions without the raw mint address (ticker/name or `links.twitter` replies).
+- Whether X adds value beyond TokenSage (still blocked on `outcomes` export from GCR).
