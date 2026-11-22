@@ -9,6 +9,7 @@ type Advisory = {
   severity?: string;
   isDirect?: boolean;
   range?: string;
+  nodes?: string[];
   via?: Array<string | { name?: string; title?: string; url?: string; source?: number }>;
   fixAvailable?: boolean | { name?: string; version?: string; isSemVerMajor?: boolean };
 };
@@ -49,6 +50,7 @@ function audit(label: string, flags: string[]): void {
       severity: v.severity ?? "unknown",
       direct: v.isDirect ?? null,
       range: v.range ?? null,
+      installedPaths: v.nodes ?? [],
       advisories: advisories.map((item) => ({ source: item.source ?? null, title: item.title ?? null, url: item.url ?? null })),
       fixAvailable: v.fixAvailable ?? null,
     }));
