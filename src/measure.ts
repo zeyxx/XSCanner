@@ -17,6 +17,7 @@ export type CountsBin = { start: string; end: string; tweet_count: number };
 
 export type MeasureResult =
   | { kind: "not_a_mint" }
+  | { kind: "unknown"; reason: "invalid_counts" | "pagination_incomplete" }
   | { kind: "measured"; bins: CountsBin[]; page: { complete: boolean } };
 
 export type MeasureDeps = {
@@ -70,40 +71,91 @@ export function isMint(account: AccountRead): boolean {
   return true;
 }
 
-function parseCounts(body: unknown): { bins: CountsBin[]; complete: boolean } {
-  const record = body as {
-    data?: Array<{ start?: string; end?: string; tweet_count?: number }>;
-    meta?: { next_token?: string; pagination_token?: string };
+type ParsedCounts =
+  | { kind: "valid"; bins: CountsBin[]; complete: boolean }
+  | { kind: "invalid" };
+
+/**
+ * Fail closed: malformed or missing X counts are unknown, never measured zero.
+ * page.complete indicates pagination only; it is NOT point-in-time admissibility
+ * (that needs acquisition evidence and a fully specified query window).
+ */
+function parseCounts(body: unknown): ParsedCounts {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return { kind: "invalid" };
+  }
+  const record = body as Record<string, unknown>;
+  if (!Array.isArray(record.data) || record.data.length === 0 ||
+      typeof record.meta !== "object" || record.meta === null || Array.isArray(record.meta)) {
+    return { kind: "invalid" };
+  }
+  const meta = record.meta as Record<string, unknown>;
+  if (!Number.isSafeInteger(meta.total_tweet_count) || (meta.total_tweet_count as number) < 0) {
+    return { kind: "invalid" };
+  }
+  for (const token of [meta.next_token, meta.pagination_token]) {
+    if (token !== undefined && token !== null && (typeof token !== "string" || token.length === 0)) {
+      return { kind: "invalid" };
+    }
+  }
+
+  const bins: CountsBin[] = [];
+  let summed = 0;
+  for (const item of record.data) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      return { kind: "invalid" };
+    }
+    const bin = item as Record<string, unknown>;
+    if (typeof bin.start !== "string" || typeof bin.end !== "string" ||
+        !Number.isSafeInteger(bin.tweet_count) || (bin.tweet_count as number) < 0) {
+      return { kind: "invalid" };
+    }
+    const startMs = Date.parse(bin.start);
+    const endMs = Date.parse(bin.end);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) ||
+        endMs - startMs !== 60_000 || startMs % 60_000 !== 0) {
+      return { kind: "invalid" };
+    }
+    summed += bin.tweet_count as number;
+    if (!Number.isSafeInteger(summed)) return { kind: "invalid" };
+    bins.push({ start: bin.start, end: bin.end, tweet_count: bin.tweet_count as number });
+  }
+  if (summed > (meta.total_tweet_count as number)) return { kind: "invalid" };
+  return {
+    kind: "valid",
+    bins,
+    complete: meta.next_token == null && meta.pagination_token == null,
   };
-  const bins = (record.data ?? []).map((bin) => ({
-    start: bin.start ?? "",
-    end: bin.end ?? "",
-    tweet_count: bin.tweet_count ?? 0,
-  }));
-  const meta = record.meta ?? {};
-  const complete = meta.next_token == null && meta.pagination_token == null;
-  return { bins, complete };
 }
 
 export async function measureAttention(
   mint: string,
   deps: MeasureDeps,
 ): Promise<MeasureResult> {
-  const day = deps.now().toISOString().slice(0, 10);
-  const key = `${mint}:${day}`;
+  // An observation cannot be reused for an entire day when resolution is one minute.
+  const minute = deps.now().toISOString().slice(0, 16);
+  const key = `${mint}:${minute}`;
   const cached = deps.cache.get(key);
   if (cached) return cached;
 
   const account = await deps.readAccount(mint);
-  if (!isMint(account)) {
-    return { kind: "not_a_mint" };
-  }
+  if (!isMint(account)) return { kind: "not_a_mint" };
+
   const parsed = parseCounts(await deps.readCounts(mint));
+  if (parsed.kind === "invalid") return { kind: "unknown", reason: "invalid_counts" };
+  if (!parsed.complete) return { kind: "unknown", reason: "pagination_incomplete" };
+
   const result: MeasureResult = {
     kind: "measured",
     bins: parsed.bins,
-    page: { complete: parsed.complete },
+    page: { complete: true },
   };
+  // Keep one cached observation per mint, without unbounded minute-key growth.
+  for (const previousKey of deps.cache.keys()) {
+    if (previousKey.startsWith(`${mint}:`) && previousKey !== key) {
+      deps.cache.delete(previousKey);
+    }
+  }
   deps.cache.set(key, result);
   return result;
 }
