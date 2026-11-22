@@ -2,7 +2,7 @@ name: X0 offline validation
 
 on:
   pull_request:
-    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122', 'fix/x0-mint-budget-20261122', 'fix/x0-counts-cache-20261122', 'fix/x0-token2022-audit-20261122', 'fix/x0-prune-npm-20261122', 'fix/x0-vitest-upgrade-20261122']
+    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122', 'fix/x0-mint-budget-20261122', 'fix/x0-counts-cache-20261122', 'fix/x0-token2022-audit-20261122', 'fix/x0-prune-npm-20261122', 'fix/x0-vitest-upgrade-20261122', 'fix/x0-token2022-combinations-20261122']
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,13 @@ jobs:
         run: npm ci
       - name: Verify installed dependency roots
         run: npm ls --depth=0
+      - name: Prove X compare CLI dry-run needs no .env or data
+        run: |
+          test ! -e .env
+          test ! -e data/prices.jsonl
+          env -u GETXAPI_KEY -u X_API_BEARER_TOKEN npm run compare:x -- --dry-run --limit 2
+          env -u GETXAPI_KEY -u X_API_BEARER_TOKEN npm run compare:x
+          test ! -e data/compare-x.jsonl
       - name: TypeScript check
         run: npm run build
       - name: CLI TypeScript check (all scripts, no execution)
