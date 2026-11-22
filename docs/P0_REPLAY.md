@@ -8,7 +8,7 @@ Status: **schema and countertests only, 2026-11-22**. No historical source bundl
 - Aggregates cannot reconstruct individual candidate decision moments, source acquisition times, non-alerted candidate population, TokenSage anchored reads or realized execution prices. **Do not invent rows from the 9/30, 5/30, $0.18 historical totals.**
 - `src/experiment/replay.ts::assessP0Replay` is a **pure evidence-admission function**, not a data connector, strategy simulation, forecasting algorithm or A/B/C/D scorer. It only accepts caller-supplied in-memory rows; it does not make a network call or write a file.
 
-## One row per candidate decision moment
+## One row per supplied moment (candidate decision or joined alert)
 
 `P0ReplayRow` carries the following required contract:
 
@@ -17,19 +17,22 @@ Status: **schema and countertests only, 2026-11-22**. No historical source bundl
 | `candidateKey` | stable decision-moment identity, **not just mint** | no duplicates, repeated decisions on same mint preserved |
 | `mint` | candidate mint string | mint account check upstream; syntax alone is not enough |
 | `population` | `selected_alert` or `candidate_decision` | origin and scope documented, not inferred from a partial export |
-| `t0Ms`, `decisionAtMs` | alert/candidate timestamp and decision cutoff | finite, ordered, independently recorded |
+| `anchorAtMs`, `decisionAtMs` | `CandidateOutcome.anchorAt` and independently recorded model-decision cutoff | finite, ordered; **`CuratedAlert.createdAt` must not be substituted for `anchorAt`** |
 | `xCounts.rawResponse` | unmodified X counts response body from one acquisition | strict parser validates mandatory meta total, counts, bins and pagination before PIT gate |
 | `xCounts.acquisition` | request start, response arrival, query window start/end | values recorded at I/O time; no historical fill-ins |
 | `xCounts.availableAtMs` | instant the X result became usable by model | non-null, >= response receipt, <= decision for PIT admission |
-| `outcome` | optional descriptive 60m price return | labeled `t0_minute_open_descriptive` only, not executable PnL |
+| `outcome` | optional descriptive 60m price return | labeled `anchor_minute_open_descriptive` only, not executable PnL; an E7 alert-minute return is not automatically an anchor-minute return |
 
 All `xCounts` data are first evaluated with `parseXCountsPageStrict` (malformed/absent metadata and mismatched bin totals fail closed), then with `assessPointInTimeCounts`: no look-ahead, missing/pagination/window gaps are **not admissible**. A valid measured zero remains **zero**; absent or late X is **null**. A late retrospective provider response cannot become a point-in-time signal even if the tweets were posted before the decision.
 
 ## Outputs and nonclaims
 
-The validator returns **counts of input moments**, populations, measured-zero, measured-nonzero, missing, nonadmissible and optional descriptive-outcome availability, plus one status per input. It always emits `mode: "P0_evidence_only"`, `ablationReady: false`, `executablePnlAvailable: false`.
+The validator returns **`totalInputMoments`, counts of supplied input moments**, populations, measured-zero, measured-nonzero, missing, nonadmissible and optional descriptive-outcome availability, plus one status per input. It always emits `mode: "P0_evidence_only"`, `ablationReady: false`, `executablePnlAvailable: false`.
 
-A row labeled `candidate_decision` is **not proof that all candidates were exported**. `selected_alert` records are conditioned on the existing TrenchScanner/TokenSage model; descriptive comparison on them is the P-only selected-alert protocol, **not** the A/B/C/D ablation. The validator does not train models, evaluate holdouts, estimate incremental lift or profitability, compute any trade entry, or claim statistical significance.
+A row labeled `candidate_decision` is **not proof that all candidates were exported**. An alert's `createdAt` and its linked `CandidateOutcome.anchorAt` are distinct events; a selected-alert row requires a verifiable join, never a timestamp substitution. `selected_alert` records are conditioned on the existing TrenchScanner/TokenSage model; descriptive comparison on them is the P-only selected-alert protocol, **not** the A/B/C/D ablation. The validator does not train models, evaluate holdouts, estimate incremental lift or profitability, compute any trade entry, or claim statistical significance.
+
+**Source-of-truth mapping (upstream b4ed579):** `CandidateOutcome.id` and `anchorAt` can identify a sampled moment. `sampleKind` distinguishes `event`/`second`/`entry` decisions from `hourly` background, `emission` selected curator anchors and `match` user filters. The linked `CuratedAlert.createdAt` is an emitted alert time, **not** its original candidate anchor. The partner's `alerts`/`paths` exports lack the operator-only `outcomes` population; do not fabricate non-alert rows. See `docs/UPSTREAM_DATA_PROVENANCE.md`.
+
 
 ## Future evidence dependencies (must be fulfilled explicitly)
 
