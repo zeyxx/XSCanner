@@ -16,7 +16,7 @@ const MINT = "9zB5wRarXMj86MymwLumSKA1Dx35zPqqKfcZtK1Spump";
 const countsBody = {
   data: [
     {
-      start: "2026-10-30T17:10:50.000Z",
+      start: "2026-10-30T17:10:00.000Z",
       end: "2026-10-30T17:11:00.000Z",
       tweet_count: 0,
     },
@@ -76,7 +76,7 @@ describe("measureAttention", () => {
     expect(result.page.complete).toBe(true);
   });
 
-  it("does not call counts again the same UTC day", async () => {
+  it("does not call counts again the same UTC minute", async () => {
     let countsCalls = 0;
     const cache = new Map();
     const deps = {
@@ -98,6 +98,83 @@ describe("measureAttention", () => {
     await measureAttention(MINT, deps);
 
     expect(countsCalls).toBe(1);
+  });
+});
+
+describe("counts integrity and minute-scale freshness", () => {
+  const validMint = () => ({
+    kind: "account" as const,
+    owner: TOKEN_2022,
+    executable: false,
+    data: mintBytes(),
+  });
+
+  it("never turns malformed, missing or empty responses into measured zero", async () => {
+    const invalid = [
+      null, {}, { meta: { total_tweet_count: 0 } },
+      { data: [], meta: { total_tweet_count: 0 } },
+      { data: [{ start: "bad", end: "2026-10-30T17:11:00Z", tweet_count: 0 }], meta: { total_tweet_count: 0 } },
+      { data: [{ start: "2026-10-30T17:10:00Z", end: "2026-10-30T17:11:00Z", tweet_count: -1 }], meta: { total_tweet_count: 0 } },
+      { data: [{ start: "2026-10-30T17:10:00Z", end: "2026-10-30T17:11:00Z", tweet_count: 2 }], meta: { total_tweet_count: 1 } },
+    ];
+    for (const body of invalid) {
+      const cache = new Map();
+      const result = await measureAttention(MINT, {
+        now: () => new Date("2026-11-22T16:00:00Z"),
+        readAccount: async () => validMint(),
+        readCounts: async () => body,
+        cache,
+      });
+      expect(result).toEqual({ kind: "unknown", reason: "invalid_counts" });
+      expect(cache.size).toBe(0);
+    }
+  });
+
+  it("retains a real zero bin, but rejects incomplete pagination without caching", async () => {
+    const zero = {
+      data: [{ start: "2026-10-30T17:10:00Z", end: "2026-10-30T17:11:00Z", tweet_count: 0 }],
+      meta: { total_tweet_count: 0 },
+    };
+    const cache = new Map();
+    const deps = {
+      now: () => new Date("2026-11-22T16:00:00Z"),
+      readAccount: async () => validMint(),
+      readCounts: async () => zero,
+      cache,
+    };
+    const measured = await measureAttention(MINT, deps);
+    expect(measured.kind).toBe("measured");
+    if (measured.kind === "measured") {
+      expect(measured.bins[0]?.tweet_count).toBe(0);
+      expect(measured.page.complete).toBe(true);
+    }
+    cache.clear();
+    const incomplete = await measureAttention(MINT, {
+      ...deps,
+      readCounts: async () => ({ ...zero, meta: { total_tweet_count: 0, next_token: "next" } }),
+    });
+    expect(incomplete).toEqual({ kind: "unknown", reason: "pagination_incomplete" });
+    expect(cache.size).toBe(0);
+  });
+
+  it("refreshes after one UTC minute and evicts the prior mint observation", async () => {
+    let clock = "2026-11-22T16:00:10Z";
+    let calls = 0;
+    const cache = new Map();
+    const deps = {
+      now: () => new Date(clock),
+      readAccount: async () => validMint(),
+      readCounts: async () => { calls++; return countsBody; },
+      cache,
+    };
+    await measureAttention(MINT, deps);
+    await measureAttention(MINT, deps);
+    expect(calls).toBe(1);
+    clock = "2026-11-22T16:01:00Z";
+    await measureAttention(MINT, deps);
+    expect(calls).toBe(2);
+    expect(cache.size).toBe(1);
+    expect([...cache.keys()][0]).toContain("2026-11-22T16:01");
   });
 });
 
