@@ -13,7 +13,7 @@ export type P0ReplayRow = {
   candidateKey: string; // event/decision identity; do not deduplicate by mint
   mint: string;
   population: "selected_alert" | "candidate_decision";
-  t0Ms: number;
+  anchorAtMs: number; // CandidateOutcome.anchorAt, NOT CuratedAlert.createdAt
   decisionAtMs: number;
   xCounts: {
     rawResponse: unknown; // unchanged received body; strict parse required
@@ -22,7 +22,7 @@ export type P0ReplayRow = {
   } | null;
   outcome: {
     return60mPct: number | null;
-    priceBasis: "t0_minute_open_descriptive";
+    priceBasis: "anchor_minute_open_descriptive";
   } | null;
 };
 
@@ -35,7 +35,7 @@ export type P0Decision = {
 
 export type P0Summary = {
   mode: "P0_evidence_only";
-  totalCandidateMoments: number;
+  totalInputMoments: number; // supplied rows, NOT the full candidate universe
   selectedAlertMoments: number;
   candidateDecisionMoments: number;
   outcomesWithDescriptiveReturns: number;
@@ -58,7 +58,7 @@ export function assessP0Replay(rows: readonly P0ReplayRow[]): P0Summary {
   const seen = new Set<string>();
   const summary: P0Summary = {
     mode: "P0_evidence_only",
-    totalCandidateMoments: 0,
+    totalInputMoments: 0,
     selectedAlertMoments: 0,
     candidateDecisionMoments: 0,
     outcomesWithDescriptiveReturns: 0,
@@ -77,19 +77,19 @@ export function assessP0Replay(rows: readonly P0ReplayRow[]): P0Summary {
       throw new Error("P0 rows require non-empty unique decision identities and mint addresses.");
     }
     seen.add(row.candidateKey);
-    if (!Number.isFinite(row.t0Ms) || !Number.isFinite(row.decisionAtMs) ||
-        row.decisionAtMs < row.t0Ms) {
+    if (!Number.isFinite(row.anchorAtMs) || !Number.isFinite(row.decisionAtMs) ||
+        row.decisionAtMs < row.anchorAtMs) {
       throw new Error("P0 decision and alert timestamps must be finite and ordered.");
     }
     if (row.population !== "selected_alert" && row.population !== "candidate_decision") {
       throw new Error("Unknown P0 population label.");
     }
-    if (row.outcome !== null && (row.outcome.priceBasis !== "t0_minute_open_descriptive" ||
+    if (row.outcome !== null && (row.outcome.priceBasis !== "anchor_minute_open_descriptive" ||
         (row.outcome.return60mPct !== null && !Number.isFinite(row.outcome.return60mPct)))) {
       throw new Error("P0 only accepts finite descriptive outcomes; never executable PnL.");
     }
 
-    summary.totalCandidateMoments++;
+    summary.totalInputMoments++;
     if (row.population === "selected_alert") summary.selectedAlertMoments++;
     else summary.candidateDecisionMoments++;
     if (row.outcome?.return60mPct !== null &&
