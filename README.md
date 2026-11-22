@@ -31,6 +31,24 @@ The [E7 ledger](docs/EXPERIMENTS.md) already records a **14 Nov exploratory comp
 
 **No implicit GO** for X paid API usage, scraping, merges to `main`, partner API access, upstream code changes, deployment or real trading. Archive findings remain dated; when a test is actually rerun, record revision, data window, cost and output read-back in the existing `docs/EXPERIMENTS.md` ledger.
 
+## Active workstreams and evidence gates (X0, 2026-11-22)
+
+**One XSCanner project, not seven new repositories or competing roadmaps.** Workstream names below route a question to its **existing owner document**. `GUIDELINE.md` still owns the standalone product scope and milestones; `INTEGRATION.md` owns upstream boundaries; `PROTOCOL.md` owns hypotheses and evaluations. Status labels distinguish a proposal from implemented, tested and integrated code.
+
+| Workstream | Question / owner | First evidence gate | Now |
+| --- | --- | --- | --- |
+| **X1 — T/T integration** | TrenchScanner/TokenSage ownership and async contracts; [integration](docs/INTEGRATION.md) | Agree **A: scanner orchestrates separate reads** vs **B: TokenSage consumes social reads**; verify data shapes, permissions and arrival before model decision, without editing upstream | **Code inspected / proposal only** |
+| **X2 — X sources and economics of collection** | Coverage, legitimacy, supplier failures, freshness and budgets; [providers](docs/PROVIDERS.md) + [experiments](docs/EXPERIMENTS.md) | Offline replay of provider formats and E7 receipts; per-eligible-mint cost, empty/missing share, latency and lawful use; explicit GO before new paid requests | **E7 exploratory** |
+| **X3 — identity and attribution** | Mint/account validation; URL, ticker, replies, shared-story and copycat attribution; [guideline](docs/GUIDELINE.md) and [integration](docs/INTEGRATION.md) | Deterministic negatives/ambiguous links and mint-to-thread evidence; no synthetic certainty from address substring counts | **Partial primitives** |
+| **X4 — social measurement and manipulation** | Independent voices, timing, coordination, raids, flags; [scoring](docs/SCORING.md) | Versioned features from observable data, quality/false-positive tests; **no** authenticity or cohort percentile without actors or cohort | **Target not implemented** |
+| **X5 — incremental utility and profitability** | [comparison protocol](docs/PROTOCOL.md) | Pre-registered A (T), B (T+S), C (T+X), D (T+S+X); point-in-time evaluation + uncertainty; compare **economic value net of feasible execution costs** separately from **provider/infra cost and potential product revenue**; no claim of trading alpha from E7 | **Not proven; operator data needed for B/D** |
+| **X6 — reliable standalone runtime** | [guideline milestones](docs/GUIDELINE.md) | Schema and idempotent minute bins; replay, queues, TTLs, rate limits, usage meters, opt-in public API, security and observability; independent CI and read-back | **Offline CI only** |
+| **X7 — autonomous X -> chain research** | Bidirectional discovery beyond T/T; [guideline](docs/GUIDELINE.md) | Prove incremental discovery vs existing PumpPortal and source rights/economics; explicitly deferred from the T/T-seeded pilot, not dropped from product ambition | **Deferred hypothesis** |
+
+**Order of execution is not X1 through X7 sequentially.** Start with **X1 + X2 + minimum viable X5** (can the data answer the question before it costs more?). X3 supplies trustworthy matching, then X4 earns its complexity through evidence. X6 advances only as demanded by a reproducible experiment. X7 remains separately gated. Cross-cutting collaboration/permissions and secret hygiene apply everywhere but do **not** establish a new service.
+
+**Decision states:** `PROPOSED` -> `EVIDENCE_COLLECTED` -> `REPRODUCED_OFFLINE` -> `EXPERIMENT_APPROVED` -> `SHADOW_VALIDATED` -> `INTEGRATION_APPROVED_BY_OWNER` (each requires its own read-back). `NO_GO` or `UNKNOWN` are valid outcomes, not automatic permission to advance. A GitHub PR or passed unit tests alone does not imply live features or financial profitability.
+
 ## Docs
 
 - `docs/INTEGRATION.md` — what was observed in his code, the open holes, what is not claimed
