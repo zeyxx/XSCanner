@@ -21,6 +21,16 @@ Observed 2026-11-12 (`npx vitest run`, `npx tsc --noEmit`):
 
 The earlier draft under `src/domain/` was removed. It encoded a formula his brief does not describe, a cohort number without a universe, and a call site that does not exist in his tree. Do not restore it as-is.
 
+## X0 — evidence reconciliation (2026-11-22, proposal)
+
+**Scope:** This is the experimental branch, not `main`; do not treat code here as connected to TrenchScanner's score or running in production. X0 is the next proposed research gate, not an implementation or deployment approval. [TALARIA R&D-SOL-01](https://github.com/zeyxx/talaria/issues/8) tracks cross-project priorities; this repository owns its experiment and code.
+
+The [E7 ledger](docs/EXPERIMENTS.md) already records a **14 Nov exploratory comparison on 30 mints** with complete 60-minute price paths. Official X recent counts yielded **9/30 mints with a pre-`t0` raw-mint mention** vs **5/30 for GetXAPI**; recorded cost for 30 requests was **$0.15 vs $0.03**, respectively. Those are provider-coverage and descriptive-return observations, **not proof of predictive alpha**, statistical significance, a live feed or an improvement beyond TokenSage. The earlier one-mint test from 6 Nov is historic; do not restart research as if E7 did not happen.
+
+**Next bounded decision:** review the actual branch/test provenance and [four-arm comparison protocol](docs/PROTOCOL.md), establish timestamp-correct baseline data and permissions, and select a small controlled experiment with a pre-approved budget. In that protocol, the TokenSage comparisons (B/D) cannot be evaluated without the operator-only anchored narrative/outcomes data; with only alerts and prices, A vs C is an exploratory comparison **without controlling for TokenSage**. Check availability of a valid/replaced partner credential privately before accessing any partner endpoint; never place keys or private data in GitHub.
+
+**No implicit GO** for X paid API usage, scraping, merges to `main`, partner API access, upstream code changes, deployment or real trading. Archive findings remain dated; when a test is actually rerun, record revision, data window, cost and output read-back in the existing `docs/EXPERIMENTS.md` ledger.
+
 ## Docs
 
 - `docs/INTEGRATION.md` — what was observed in his code, the open holes, what is not claimed
