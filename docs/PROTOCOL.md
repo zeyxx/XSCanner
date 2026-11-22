@@ -1,6 +1,6 @@
 # Comparison protocol (draft)
 
-Status: proposal, 2026-11-12. Not validated. Nothing here has been run.
+Status: original protocol proposed 2026-11-12, revised as a **Draft proposal** 2026-11-22. The **A/B/C/D model-ablation experiment has not been executed or ratified**. Separate E7 provider-count observations in `docs/EXPERIMENTS.md` are historical, descriptive and do not validate this protocol.
 No X credit, API call, webhook or deployment is authorized by this file.
 
 ## Question
