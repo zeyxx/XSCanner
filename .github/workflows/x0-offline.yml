@@ -2,7 +2,7 @@ name: X0 offline validation
 
 on:
   pull_request:
-    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122', 'fix/x0-mint-budget-20261122']
+    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122', 'fix/x0-mint-budget-20261122', 'fix/x0-counts-cache-20261122']
   workflow_dispatch:
 
 permissions:
@@ -28,3 +28,5 @@ jobs:
         run: npm run check:cli
       - name: Unit tests (no keys or paid providers)
         run: npm test
+      - name: Dependency advisories (read-only, informational; not a promotion gate)
+        run: node --import tsx scripts/audit-deps.ts
