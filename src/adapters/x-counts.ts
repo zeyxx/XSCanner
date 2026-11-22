@@ -132,14 +132,14 @@ export function assessPointInTimeCounts(
   if (
     requested === null || received === null || start === null || end === null ||
     ![requested, received, start, end, decision].every(Number.isFinite) ||
-    requested > received || start >= end || end > received
+    requested > received || start >= end
   ) {
     return { status: "not_admissible", reason: "missing_or_invalid_timing" };
   }
   if (received > decision) {
     return { status: "not_admissible", reason: "response_after_decision" };
   }
-  if (end > decision) {
+  if (end > decision || end > received) {
     return { status: "not_admissible", reason: "future_or_unclosed_window" };
   }
   if (page.nextToken !== null) {
