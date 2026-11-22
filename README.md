@@ -2,9 +2,9 @@
 
 A measurement of public X attention for a mint someone gives it.
 
-Not wired. Not a second Solana listener. Not TokenSage. Not a trading bot.
+Not wired into TrenchScanner or TokenSage. The **TrenchScanner-seeded pilot** does not duplicate their Solana listener; the standalone X → chain discovery ambition in `docs/GUIDELINE.md` remains a separate, deferred hypothesis. Not a trading bot.
 
-`docs/INTEGRATION.md` is the authority for how this sits next to TrenchScanner and TokenSage. If this file disagrees with it, this file is wrong.
+`docs/INTEGRATION.md` is the **working evidence map and integration proposal**, not an approved interface or binding upstream authority. TrenchScanner and TokenSage owners control their own APIs, model features, integrations and permissions. Contradictions must be reviewed at the original source, not resolved by promoting a proposal.
 
 `docs/GUIDELINE.md` is GCR's brief for a standalone product. It is not the integration plan, and it is not implemented.
 
@@ -47,17 +47,17 @@ The [E7 ledger](docs/EXPERIMENTS.md) already records a **14 Nov exploratory comp
 
 **Order of execution is not X1 through X7 sequentially.** Start with **X1 + X2 + minimum viable X5** (can the data answer the question before it costs more?). X3 supplies trustworthy matching, then X4 earns its complexity through evidence. X6 advances only as demanded by a reproducible experiment. X7 remains separately gated. Cross-cutting collaboration/permissions and secret hygiene apply everywhere but do **not** establish a new service.
 
-**Decision states:** `PROPOSED` -> `EVIDENCE_COLLECTED` -> `REPRODUCED_OFFLINE` -> `EXPERIMENT_APPROVED` -> `SHADOW_VALIDATED` -> `INTEGRATION_APPROVED_BY_OWNER` (each requires its own read-back). `NO_GO` or `UNKNOWN` are valid outcomes, not automatic permission to advance. A GitHub PR or passed unit tests alone does not imply live features or financial profitability.
+**Independent status axes (not one automatic lifecycle):** **evidence** (hypothesis / observed / reproduced / insufficient), **implementation** (not wired / code exists / locally tested / integration verified), **operation** (not observed / verified on named runtime), **decision and authorization** (study / paid experiment / upstream change / merge / deploy / financial action, separately scoped by owner). `UNKNOWN`, `NOT_DEMONSTRATED` and `NO_GO` are valid. A passing test or a study approval does **not** transitively authorize the next axis or action. This follows TALARIA [ADR-0001](https://github.com/zeyxx/talaria/blob/main/docs/ADR-0001.md) without imposing a universal state machine on the owner repos.
 
 ## Docs
 
 - `docs/INTEGRATION.md` — what was observed in his code, the open holes, what is not claimed
 - `docs/GUIDELINE.md` — his standalone brief
 - `docs/RESEARCH.md` — his evidence notes
-- `docs/PROTOCOL.md` — comparison protocol (draft, not validated, nothing run)
+- `docs/PROTOCOL.md` — **proposed** point-in-time validation and A/B/C/D design; **not executed as a model ablation** (E7 is a separate descriptive experiment)
 - `docs/SCORING.md` — his target formula, and why the deleted code was not that formula
-- `docs/DECISIONS.md` — decisions actually taken (language, where scoring parameters live)
-- `docs/PROVIDERS.md` — notes on the three X providers, including bugs found in the deleted adapters
+- `docs/DECISIONS.md` — accepted **local design choices**, not delivery of a score nor upstream approval
+- `docs/PROVIDERS.md` — dated provider and compliance observations; historical adapter fixes do **not** attest current implementations
 - `AGENTS.md` — rules for the next code
 
 ## Rules for the next code
