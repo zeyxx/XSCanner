@@ -41,6 +41,7 @@ describe("paid comparison admission (no network or real credentials)", () => {
       ["--limit", "0"], ["--limit", "51"], ["--limit", "-5"],
       ["--limit", "NaN"], ["--limit", "2.5"], ["--limit", "Infinity"],
       ["--foo"], ["--limit"], ["--limit", "2", "--limit", "3"],
+      ["--execute", "--execute"],
     ]) {
       expect(() => planComparison(argv, NOW)).toThrow();
     }
