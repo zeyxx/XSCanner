@@ -1,7 +1,7 @@
 import {
   assessPointInTimeCounts,
+  parseXCountsPageStrict,
   type CountsAcquisitionEvidence,
-  type XCountsPage,
 } from "../adapters/x-counts.js";
 
 /**
@@ -16,7 +16,7 @@ export type P0ReplayRow = {
   t0Ms: number;
   decisionAtMs: number;
   xCounts: {
-    page: XCountsPage;
+    rawResponse: unknown; // unchanged received body; strict parse required
     acquisition: Omit<CountsAcquisitionEvidence, "decisionAtMs">;
     availableAtMs: number | null; // when this particular read reached the model
   } | null;
@@ -126,7 +126,16 @@ export function assessP0Replay(rows: readonly P0ReplayRow[]): P0Summary {
       continue;
     }
 
-    const proof = assessPointInTimeCounts(x.page, {
+    const page = parseXCountsPageStrict(x.rawResponse);
+    if (page === null) {
+      summary.notAdmissibleX++;
+      summary.decisions.push({
+        candidateKey: row.candidateKey, status: "not_admissible",
+        reason: "invalid_raw_counts", mentions: null,
+      });
+      continue;
+    }
+    const proof = assessPointInTimeCounts(page, {
       ...a, decisionAtMs: row.decisionAtMs,
     });
     if (proof.status === "not_admissible") {
