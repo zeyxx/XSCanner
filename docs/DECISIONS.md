@@ -3,7 +3,7 @@
 ## D-001: Language — TypeScript (Node)
 
 **Date:** 2026-11-05
-**Status:** Accepted
+**Status:** Accepted local language choice; not a TrenchScanner/TokenSage upstream interface approval
 
 ### Decision
 TypeScript (Node.js) for the entire XSCanner codebase.
