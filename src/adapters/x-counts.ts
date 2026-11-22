@@ -83,3 +83,95 @@ export function summarizeXCountsBeforeCutoff(page: XCountsPage, cutoffMs: number
     hasMore: page.nextToken !== null,
   };
 }
+
+
+/**
+ * Research-only, deterministic admissibility gate for a historical X counts page.
+ *
+ * A post created before an alert is NOT necessarily available to a strategy at that
+ * alert: a retrospective API call may have fetched it hours later. Timestamps below
+ * must be recorded by the collector when the HTTP request actually occurs. No
+ * current-time defaults are allowed; absent evidence is unknown, never zero.
+ *
+ * For this first pilot the requested window must use complete, contiguous minute
+ * bins, with exact boundaries. Queries with partial boundary minutes are marked
+ * unknown until their coverage semantics have been characterized.
+ */
+export type CountsAcquisitionEvidence = {
+  requestStartedAtMs: number | null;
+  responseReceivedAtMs: number | null;
+  queryWindowStartMs: number | null;
+  queryWindowEndMs: number | null;
+  decisionAtMs: number;
+};
+
+export type DecisionCountAssessment =
+  | { status: "admissible"; totalMentions: number; binCount: number }
+  | {
+      status: "not_admissible";
+      reason:
+        | "missing_or_invalid_timing"
+        | "response_after_decision"
+        | "future_or_unclosed_window"
+        | "pagination_incomplete"
+        | "missing_or_invalid_bins"
+        | "incomplete_window_coverage";
+    };
+
+export function assessPointInTimeCounts(
+  page: XCountsPage,
+  evidence: CountsAcquisitionEvidence,
+): DecisionCountAssessment {
+  const {
+    requestStartedAtMs: requested,
+    responseReceivedAtMs: received,
+    queryWindowStartMs: start,
+    queryWindowEndMs: end,
+    decisionAtMs: decision,
+  } = evidence;
+  if (
+    requested === null || received === null || start === null || end === null ||
+    ![requested, received, start, end, decision].every(Number.isFinite) ||
+    requested > received || start >= end || end > received
+  ) {
+    return { status: "not_admissible", reason: "missing_or_invalid_timing" };
+  }
+  if (received > decision) {
+    return { status: "not_admissible", reason: "response_after_decision" };
+  }
+  if (end > decision) {
+    return { status: "not_admissible", reason: "future_or_unclosed_window" };
+  }
+  if (page.nextToken !== null) {
+    return { status: "not_admissible", reason: "pagination_incomplete" };
+  }
+  if (page.bins.length === 0) {
+    return { status: "not_admissible", reason: "missing_or_invalid_bins" };
+  }
+
+  const bars = [...page.bins].sort((a, b) => a.startMs - b.startMs);
+  let total = 0;
+  let expectedStart = start;
+  for (const bin of bars) {
+    if (
+      !Number.isFinite(bin.startMs) || !Number.isFinite(bin.endMs) ||
+      !Number.isSafeInteger(bin.tweetCount) || bin.tweetCount < 0 ||
+      bin.endMs - bin.startMs !== 60_000 || bin.startMs < start ||
+      bin.endMs > end || bin.endMs > received
+    ) {
+      return { status: "not_admissible", reason: "missing_or_invalid_bins" };
+    }
+    if (bin.startMs !== expectedStart) {
+      return { status: "not_admissible", reason: "incomplete_window_coverage" };
+    }
+    total += bin.tweetCount;
+    if (!Number.isSafeInteger(total)) {
+      return { status: "not_admissible", reason: "missing_or_invalid_bins" };
+    }
+    expectedStart = bin.endMs;
+  }
+  if (expectedStart !== end) {
+    return { status: "not_admissible", reason: "incomplete_window_coverage" };
+  }
+  return { status: "admissible", totalMentions: total, binCount: bars.length };
+}
