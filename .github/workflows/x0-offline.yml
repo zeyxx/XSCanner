@@ -22,6 +22,7 @@ jobs:
           cache: npm
       - name: Resolve candidate lockfile for review (temporary only)
         run: |
+          rm package-lock.json
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
