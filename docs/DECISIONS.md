@@ -27,10 +27,10 @@ TypeScript (Node.js) for the entire XSCanner codebase.
 ## D-002: Scoring parameters live next to the score
 
 **Date:** 2026-11-06
-**Status:** Accepted
+**Status:** Accepted **local design intent** (not implemented or ratified upstream)
 
 ### Decision
-Scoring thresholds live in one object, `SCORING_CONFIG`, next to the metrics.
+When scoring is implemented, thresholds should live in one object, `SCORING_CONFIG`, next to the metrics. The current experimental branch has **no such score or config**.
 Runtime (port, pool, secrets) stays in the environment.
 Provider API bounds stay in the adapter that calls that provider.
 
