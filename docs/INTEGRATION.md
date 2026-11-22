@@ -7,8 +7,8 @@ Three texts disagree. They are not the same kind of claim.
 | Text | Kind | What it is |
 |---|---|---|
 | `docs/GUIDELINE.md` | GCR's brief for a standalone product | Both directions, own Solana listener, track from creation. Does not mention TrenchScanner or TokenSage. |
-| TrenchScanner + TokenSage code | Terrain | What actually runs. |
-| Discord, 2026-11-05 20:54 | Offer, not a wire | He has not built XSCanner. He might have TokenSage call it later. The partner webhook is ready; the API key comes when we ask. |
+| TrenchScanner + TokenSage source code | Observed Git terrain | What source code implements at the inspected revisions; not a runtime, production or access read-back. |
+| Historical private partner discussion (not reproduced here) | Collaboration signal, not a contract | Earlier correspondence informed proposed integration options; no final upstream approval, valid key, data rights or execution mandate is established by this document. Keep private exchange details outside this public repository. |
 | This file, before this rewrite | Our hypothesis, written as fact | Discarded where it is not in the code. |
 
 We do not edit his repositories.
