@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { assessP0Replay, type P0ReplayRow } from "../src/experiment/replay.js";
 
 const minute = (s: string) => Date.parse(s);
-const t0 = minute("2026-11-22T16:01:00Z");
+const anchor = minute("2026-11-22T16:01:00Z");
 const decision = minute("2026-11-22T16:01:10Z");
 const rawBody = (counts: number[]) => ({
   data: counts.map((count, i) => ({
-    start: new Date(t0 - 120_000 + i * 60_000).toISOString(),
-    end: new Date(t0 - 60_000 + i * 60_000).toISOString(),
+    start: new Date(anchor - 120_000 + i * 60_000).toISOString(),
+    end: new Date(anchor - 60_000 + i * 60_000).toISOString(),
     tweet_count: count,
   })),
   meta: { total_tweet_count: counts.reduce((a, b) => a + b, 0) },
@@ -17,8 +17,8 @@ const observed = (counts: number[], overrides: Record<string, number | null> = {
   acquisition: {
     requestStartedAtMs: overrides.requestStartedAtMs ?? decision - 8_000,
     responseReceivedAtMs: overrides.responseReceivedAtMs ?? decision - 4_000,
-    queryWindowStartMs: t0 - 120_000,
-    queryWindowEndMs: t0,
+    queryWindowStartMs: anchor - 120_000,
+    queryWindowEndMs: anchor,
   },
   availableAtMs: overrides.availableAtMs ?? decision - 1_000,
 });
@@ -26,10 +26,10 @@ const row = (key: string, xCounts: P0ReplayRow["xCounts"]): P0ReplayRow => ({
   candidateKey: key,
   mint: "SyntheticMintA",
   population: "selected_alert",
-  t0Ms: t0,
+  anchorAtMs: anchor,
   decisionAtMs: decision,
   xCounts,
-  outcome: { return60mPct: -25, priceBasis: "t0_minute_open_descriptive" },
+  outcome: { return60mPct: -25, priceBasis: "anchor_minute_open_descriptive" },
 });
 
 describe("P0 replay evidence admission (synthetic-only)", () => {
@@ -46,7 +46,7 @@ describe("P0 replay evidence admission (synthetic-only)", () => {
     const before = JSON.stringify(rows);
     const result = assessP0Replay(rows);
     expect(result).toMatchObject({
-      mode: "P0_evidence_only", totalCandidateMoments: 4,
+      mode: "P0_evidence_only", totalInputMoments: 4,
       selectedAlertMoments: 4, candidateDecisionMoments: 0,
       pointInTimeX: 2, measuredZeroX: 1, measuredNonzeroX: 1,
       missingX: 1, notAdmissibleX: 1, outcomesWithDescriptiveReturns: 4,
@@ -121,9 +121,9 @@ describe("P0 replay evidence admission (synthetic-only)", () => {
   it("rejects duplicate candidate moments, invalid time order and non-descriptive outcomes", () => {
     const a = row("same-key", null);
     expect(() => assessP0Replay([a, { ...a }])).toThrow(/unique/);
-    expect(() => assessP0Replay([{ ...a, decisionAtMs: t0 - 1 }])).toThrow(/timestamps/);
+    expect(() => assessP0Replay([{ ...a, decisionAtMs: anchor - 1 }])).toThrow(/timestamps/);
     expect(() => assessP0Replay([{
-      ...a, outcome: { return60mPct: Infinity, priceBasis: "t0_minute_open_descriptive" },
+      ...a, outcome: { return60mPct: Infinity, priceBasis: "anchor_minute_open_descriptive" },
     }])).toThrow(/descriptive/);
     expect(() => assessP0Replay([{
       ...a, outcome: { return60mPct: 3, priceBasis: "execution_quote" as never },
@@ -135,7 +135,7 @@ describe("P0 replay evidence admission (synthetic-only)", () => {
     const b = row("b", null);
     const result = assessP0Replay([a, b]);
     expect(result).toMatchObject({
-      totalCandidateMoments: 2, selectedAlertMoments: 1,
+      totalInputMoments: 2, selectedAlertMoments: 1,
       candidateDecisionMoments: 1, missingX: 2,
       outcomesWithDescriptiveReturns: 1, ablationReady: false,
     });
