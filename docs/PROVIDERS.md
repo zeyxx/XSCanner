@@ -49,9 +49,11 @@
 - **Status (code vs experiment)**: Adapter and probe source files exist (`src/adapters/getxapi.ts`, `scripts/probe-getxapi.ts`). The dated E7 ledger in `docs/EXPERIMENTS.md` reports **30 GetXAPI requests on 2026-11-14** alongside official X counts. This does **not** establish ongoing endpoint availability, completeness, data rights or production readiness.
 - **ToS**: Third-party service (does not require an official X developer account). Note `docs/GUIDELINE.md` §4.1: Official X API is the only ToS-clean route; third-party providers carry scraping / supply risk.
 
-## Bugs Found & Fixed
+## Historical adapter bugs and fixes (not evidence the modules remain on this branch)
 
-| Adapter | Bug | Fix |
+These entries document **past experiments/drafts**. The current Git tree contains `src/adapters/getxapi.ts` and `src/adapters/x-counts.ts`; XOfficial, TwitterAPI.io and SocialData live post adapters named here are **not present as deployable modules**. Do not infer a working provider implementation from this table.
+
+| Adapter | Bug | Historical fix reported |
 |---|---|---|
 | XOfficial | Missing `expansions=author_id` → `includes.users` empty → authorHandle/authorFollowers always empty/0 | Added `expansions: 'author_id'` |
 | XOfficial | `max_results` not clamped to [10, 100] → API rejects values outside range | Clamped with `Math.min(Math.max(limit ?? 10, 10), 100)` |
