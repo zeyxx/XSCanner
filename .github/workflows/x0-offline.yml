@@ -2,7 +2,7 @@ name: X0 offline validation
 
 on:
   pull_request:
-    branches: ['agent/hermes/xscanner-sauvegarde']
+    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122']
   workflow_dispatch:
 
 permissions:
