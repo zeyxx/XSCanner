@@ -12,7 +12,7 @@
     "prices": "node --import tsx scripts/track-prices.ts",
     "analyze": "node --import tsx scripts/analyze-prices.ts",
     "probe:getxapi": "node --env-file=.env --import tsx scripts/probe-getxapi.ts",
-    "compare:x": "node --env-file=.env --import tsx scripts/compare-x.ts"
+    "compare:x": "node --import tsx scripts/compare-x.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
