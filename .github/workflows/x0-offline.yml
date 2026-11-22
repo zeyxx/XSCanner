@@ -2,7 +2,7 @@ name: X0 offline validation
 
 on:
   pull_request:
-    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122', 'fix/x0-mint-budget-20261122', 'fix/x0-counts-cache-20261122', 'fix/x0-token2022-audit-20261122', 'fix/x0-prune-npm-20261122', 'fix/x0-vitest-upgrade-20261122', 'fix/x0-token2022-combinations-20261122']
+    branches: ['agent/hermes/xscanner-sauvegarde', 'docs/x0-evidence-reconciliation-20261122', 'fix/x0-mint-budget-20261122', 'fix/x0-counts-cache-20261122', 'fix/x0-token2022-audit-20261122', 'fix/x0-prune-npm-20261122', 'fix/x0-vitest-upgrade-20261122', 'fix/x0-token2022-combinations-20261122', 'fix/x0-dryrun-no-io-20261122']
   workflow_dispatch:
 
 permissions:

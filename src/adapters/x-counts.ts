@@ -63,6 +63,44 @@ export function parseXCountsPage(raw: unknown): XCountsPage {
 }
 
 /**
+ * Strict parser used for P0 decision-time evidence admission. The older
+ * parseXCountsPage is deliberately tolerant for historical E7 descriptions,
+ * so its normalized output alone is not admissible PIT proof.
+ * Missing/malformed metadata cannot be turned into a zero via fallback.
+ */
+export function parseXCountsPageStrict(raw: unknown): XCountsPage | null {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
+  const obj = raw as Record<string, unknown>;
+  if (!Array.isArray(obj.data) || obj.data.length === 0 ||
+      typeof obj.meta !== "object" || obj.meta === null || Array.isArray(obj.meta)) return null;
+  const meta = obj.meta as Record<string, unknown>;
+  if (!Number.isSafeInteger(meta.total_tweet_count) || (meta.total_tweet_count as number) < 0) return null;
+  if (meta.next_token !== undefined && meta.next_token !== null &&
+      (typeof meta.next_token !== "string" || meta.next_token.length === 0)) return null;
+  const bins: XCountBin[] = [];
+  let total = 0;
+  for (const item of obj.data) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) return null;
+    const b = item as Record<string, unknown>;
+    if (typeof b.start !== "string" || typeof b.end !== "string" ||
+        !Number.isSafeInteger(b.tweet_count) || (b.tweet_count as number) < 0) return null;
+    const startMs = Date.parse(b.start);
+    const endMs = Date.parse(b.end);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) ||
+        startMs % 60_000 !== 0 || endMs - startMs !== 60_000) return null;
+    bins.push({ start: b.start, end: b.end, startMs, endMs, tweetCount: b.tweet_count as number });
+    total += b.tweet_count as number;
+    if (!Number.isSafeInteger(total)) return null;
+  }
+  if (total !== meta.total_tweet_count) return null;
+  return {
+    bins,
+    totalTweetCount: total,
+    nextToken: typeof meta.next_token === "string" ? meta.next_token : null,
+  };
+}
+
+/**
  * Sums bins strictly ended at or before `cutoffMs` (`endMs <= cutoffMs`) to avoid look-ahead
  * into the minute containing `t0`.
  */
