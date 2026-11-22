@@ -16,6 +16,12 @@ import { planComparison } from "../src/experiment/paid-run.js";
  */
 // Fail closed on unknown/malformed flags BEFORE reading credentials or doing I/O.
 const plan = planComparison(process.argv.slice(2), Date.now());
+// A dry-run is a pure CLI preflight: no .env, credentials, filesystem or network.
+// Candidate counts are deliberately unknown until an explicitly admitted live run.
+if (!plan.execute) {
+  console.log(`DRY RUN ONLY: mint limit=${plan.limit}, provider requests=0, estimated spend=0 USD; sample not read.`);
+  process.exit(0);
+}
 const limit = plan.limit;
 const OUT_FILE = "data/compare-x.jsonl";
 const PRICES_FILE = "data/prices.jsonl";
@@ -46,10 +52,6 @@ const step = Math.max(1, Math.floor(candidates.length / limit));
 const sample = candidates.filter((_, i) => i % step === 0).slice(0, limit);
 
 console.log(`complete mints: ${complete.length}  already compared: ${already.size}  planned: ${sample.length}`);
-if (!plan.execute) {
-  console.log("DRY RUN ONLY — no API requests, credentials, output files or paid charges.");
-  process.exit(0);
-}
 console.log(`OPERATOR-ATTESTED price ceilings, estimated maximum: ${plan.estimatedMaxUsd?.toFixed(6)}; actual provider billing is NOT verifiable here.`);
 const getxKey = process.env.GETXAPI_KEY;
 const xBearer = process.env.X_API_BEARER_TOKEN;
