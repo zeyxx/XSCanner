@@ -178,6 +178,74 @@ describe("counts integrity and minute-scale freshness", () => {
   });
 });
 
+describe("Token-2022 TLV structure (synthetic, no RPC)", () => {
+  const token2022 = (data: Uint8Array) => ({
+    kind: "account" as const,
+    owner: TOKEN_2022,
+    executable: false,
+    data,
+  });
+  const tlvMint = (type: number, valueLength: number) => {
+    const data = mintBytes(166 + 4 + valueLength);
+    const view = new DataView(data.buffer);
+    view.setUint16(166, type, true);
+    view.setUint16(168, valueLength, true);
+    return data;
+  };
+
+  it("accepts extension-free 166-byte mint and well-formed mint-only extensions", () => {
+    expect(isMint(token2022(mintBytes(166)))).toBe(true);
+    expect(isMint(token2022(tlvMint(3, 32)))).toBe(true); // MintCloseAuthority
+    expect(isMint(token2022(tlvMint(18, 64)))).toBe(true); // MetadataPointer
+    expect(isMint(token2022(tlvMint(9, 0)))).toBe(true);  // NonTransferable
+  });
+
+  it("rejects 355-byte multisig ambiguity, account-only and unknown extension tags", () => {
+    expect(isMint(token2022(mintBytes(355)))).toBe(false);
+    expect(isMint(token2022(tlvMint(2, 8)))).toBe(false); // TransferFeeAmount: account-only
+    expect(isMint(token2022(tlvMint(65535, 0)))).toBe(false);
+    const accountTag = tlvMint(3, 32);
+    accountTag[165] = 2;
+    expect(isMint(token2022(accountTag))).toBe(false);
+  });
+
+  it("rejects malformed extension lengths, duplicates and nonzero tail padding", () => {
+    const truncated = tlvMint(3, 32);
+    new DataView(truncated.buffer).setUint16(168, 500, true);
+    expect(isMint(token2022(truncated))).toBe(false);
+    expect(isMint(token2022(tlvMint(3, 1)))).toBe(false); // wrong known type length
+
+    const doubled = mintBytes(166 + 2 * (4 + 32));
+    const view = new DataView(doubled.buffer);
+    view.setUint16(166, 3, true);
+    view.setUint16(168, 32, true);
+    view.setUint16(202, 3, true);
+    view.setUint16(204, 32, true);
+    expect(isMint(token2022(doubled))).toBe(false);
+
+    const bogusTail = mintBytes(210);
+    bogusTail[180] = 1; // non-zero after Uninitialized TLV sentinel
+    expect(isMint(token2022(bogusTail))).toBe(false);
+    const shortTag = mintBytes(167);
+    shortTag[166] = 3;
+    expect(isMint(token2022(shortTag))).toBe(false);
+  });
+
+  it("does not call any X provider for forged TLV or multisig-shaped account", async () => {
+    for (const data of [tlvMint(2, 8), mintBytes(355)]) {
+      let calls = 0;
+      const result = await measureAttention(MINT, {
+        now: () => new Date("2026-11-22T18:00:00Z"),
+        readAccount: async () => token2022(data),
+        readCounts: async () => { calls++; return countsBody; },
+        cache: new Map(),
+      });
+      expect(result).toEqual({ kind: "not_a_mint" });
+      expect(calls).toBe(0);
+    }
+  });
+});
+
 describe("mint account gate (fail closed before provider calls)", () => {
   const account = (owner: string, data: Uint8Array) => ({
     kind: "account" as const,
