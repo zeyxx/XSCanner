@@ -1,8 +1,6 @@
 # Integration: what is observed, what is not
 
-Status: rewritten after reading the running code. Earlier versions of this file
-invented a call site (`noteSocialAttentionWanted`) that does not exist.
-Do not treat a diagram here as wired.
+Status: code-inspection record, reconciled on 2026-11-22 against public upstream Git heads: TrenchScanner `main@b4ed579` (2026-11-21) and TokenSage `main@48996c4` (2026-11-12). **Code found in Git does not certify a production deployment**. Earlier versions invented a call site (`noteSocialAttentionWanted`) that does not exist. Do not treat a diagram here as wired.
 
 Three texts disagree. They are not the same kind of claim.
 
@@ -19,7 +17,7 @@ We do not edit his repositories.
 
 TrenchScanner's worker already listens to Solana (`PumpPortalStream` in `apps/worker/src/index.ts`).
 
-After a mint passes `runRugScreen`, the scan calls `noteNarrativeWanted`. Basic depth on first pass. Full depth when the mint gets a decision row. See `apps/worker/src/tokensage/prefetch.ts`.
+On a candidate's first scan (unless excluded as Mayhem), the scan notes a low-priority **basic** TokenSage read; a screened/in-band candidate raises priority and a young coin with an X link can ask for **full** early. A full read is also requested at a decision (`event`/`entry`) moment. The scanner deliberately does not await results when emitting decisions. See `apps/worker/src/jobs/scanJob.ts`, `apps/worker/src/tokensage/prefetch.ts`.
 
 TokenSage's own guide says: no discovery feed, no exhaustive X scrape, the consumer brings the address. It answers what the linked post or profile is about. It does not count public mentions.
 
@@ -27,13 +25,13 @@ The partner webhook fires after a model call. Body includes `token.mint`, symbol
 
 `noteSocialAttentionWanted` and `loadSocialAttentionReads` are not in his tree. Grep returns nothing.
 
-TrenchScanner's README: social signal comes only from TokenSage. There is no mention-volume feed.
+TrenchScanner's model features already include TokenSage's **linked-post** engagement metrics (`nsXLikes`, `nsXReposts`, `nsXReplies`, `nsXViews`, `nsXEngagementAgeMin`), plus post/account and story-related signals (`packages/core/src/curation/narrativeFeatures.ts`). A *second copy* of those engagement counts is not an independent XSCanner signal. The current code inspection found no XSCanner-wide mention-volume pipeline.
 
 ## What XSCanner is, on that terrain
 
 A measurement of public X attention for a mint someone gives it.
 
-It does not listen to Solana. That listener already has an owner.
+In the **first TrenchScanner-seeded experiment**, it should not duplicate TrenchScanner's existing Solana listener. This is a pilot scope cut, **not a cancellation** of the standalone guideline's bidirectional X-to-chain and chain-to-X discovery goals. A standalone watcher could later serve an independent use case if its marginal utility and duplication costs justify it.
 
 It does not replace TokenSage. TokenSage reads the linked post. XSCanner would count independent voices talking about the mint. That gap is in his guide (non-goal: exhaustive X scrape) and in the TrenchScanner README.
 
@@ -57,6 +55,20 @@ The caller must send what it already knows. A mint alone is not enough for the c
 ```
 
 `onChainContext` is how authenticity cross-checks arrive without a second Solana listener: mayhem, paid boost, holder concentration, creator sells, bundled launch. If the field is absent, those checks are not done. They are not invented.
+
+## Integration alternatives and boundaries (proposal, not approved/wired)
+
+**A. TrenchScanner as orchestrator (preferred hypothesis to test):** scanner discovers mint -> queues TokenSage and XSCanner independently without awaiting them -> each service returns a versioned read -> scanner persists **separate** narrative and social records -> at each decision, consumes only the read already available. It mirrors the pattern of `noteNarrativeWanted`, `flushNarrativeRequests` and `loadNarrativeReads`, but the analogous XSCanner call sites, Prisma storage and feature-vector fields **do not exist**. They require an agreed change in the upstream repo. No new scoring component or weight is implied by an API response.
+
+**B. TokenSage consumes XSCanner:** the scanner keeps one narrative client and TokenSage imports or calls external social reads. This could simplify an upstream consumer's wiring, but it changes the TokenSage contract, introduces a further availability/cost dependency, and obscures an independent A/B/C/D evaluation unless observations are stored and exposed separately. This is a **partner choice**, not an agreed implementation.
+
+**Partner webhook:** `PUT /stats/webhook` sends `alert.created` after model decisions, with HMAC and retry semantics. It is suitable for opt-in **prospective observation/shadow data collection** if the owner permits, **not** an input to the score that produced the alert; its already-selected population also creates selection bias. The partner `alerts` and `paths` exports do not include operator-only `CandidateOutcome.features`.
+
+**Data contract to propose (not published API):** `mint`, `source`, `sourceVersion`, `observedAt`, `availableAt`, `windowStart`, `windowEnd`, `query/attributionMethod`, `counts`, `coverage/completeness`, `latencyMs`, `cost`, `status`, `error`. Caller metadata (linked tweet/profile and `onChainContext`) may reduce duplicate reads. Do not conflate `post.createdAt` with when the feature was queryable, or interpret missing as zero. Every feature admitted to evaluation needs `availableAt <= decisionAt`.
+
+**Why this is complementary:** TokenSage already parses the linked tweet/profile, its engagement and account credibility; XSCanner's proposed distinction is **mint-wide public mentions beyond linked accounts**, independent voices and possible coordination over time. Unique-author and coordination metrics require post/actor-level data, which counts-only providers cannot deliver; raw counts alone do not justify authenticity flags.
+
+**Owner / approval boundary:** this repo owns the XSCanner proposal, fixtures, budget governors and experiments. TrenchScanner/TokenSage owners own their API, DB, model features, provider permissions and integration decisions. No private partner exchanges or credentials are evidence of a deployed contract.
 
 ## Open holes (his brief, not satisfied by a single mint call)
 
