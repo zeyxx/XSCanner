@@ -18,12 +18,12 @@ Status: **schema and countertests only, 2026-11-22**. No historical source bundl
 | `mint` | candidate mint string | mint account check upstream; syntax alone is not enough |
 | `population` | `selected_alert` or `candidate_decision` | origin and scope documented, not inferred from a partial export |
 | `t0Ms`, `decisionAtMs` | alert/candidate timestamp and decision cutoff | finite, ordered, independently recorded |
-| `xCounts.page` | minute bins and pagination of a specific X counts response | raw response/normalization version; a parser cannot invent missing bins |
+| `xCounts.rawResponse` | unmodified X counts response body from one acquisition | strict parser validates mandatory meta total, counts, bins and pagination before PIT gate |
 | `xCounts.acquisition` | request start, response arrival, query window start/end | values recorded at I/O time; no historical fill-ins |
 | `xCounts.availableAtMs` | instant the X result became usable by model | non-null, >= response receipt, <= decision for PIT admission |
 | `outcome` | optional descriptive 60m price return | labeled `t0_minute_open_descriptive` only, not executable PnL |
 
-All `xCounts` data are evaluated with `assessPointInTimeCounts`: no look-ahead, missing/pagination/window gaps are **not admissible**. A valid measured zero remains **zero**; absent or late X is **null**. A late retrospective provider response cannot become a point-in-time signal even if the tweets were posted before the decision.
+All `xCounts` data are first evaluated with `parseXCountsPageStrict` (malformed/absent metadata and mismatched bin totals fail closed), then with `assessPointInTimeCounts`: no look-ahead, missing/pagination/window gaps are **not admissible**. A valid measured zero remains **zero**; absent or late X is **null**. A late retrospective provider response cannot become a point-in-time signal even if the tweets were posted before the decision.
 
 ## Outputs and nonclaims
 
