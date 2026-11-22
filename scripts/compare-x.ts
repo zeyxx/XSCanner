@@ -2,23 +2,21 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { buildGetXApiSearchUrl, parseGetXApiPage, summarizeGetXApiPage } from "../src/adapters/getxapi.js";
 import { buildXCountsUrl, parseXCountsPage, summarizeXCountsBeforeCutoff } from "../src/adapters/x-counts.js";
 import { dist, latestComplete, type PriceRow } from "../src/prices/analyze.js";
+import { planComparison } from "../src/experiment/paid-run.js";
 
 /**
  * Compares GetXAPI `advanced_search` vs Official X `counts/recent` on a small sample of
  * complete mints from `data/prices.jsonl`. One page per provider per mint (never paginates).
  *
- * Usage: npm run compare:x -- [--limit 20]
+ * Default is a read-only dry-run; NO provider request is sent.
+ * Live usage requires --execute --limit N --max-usd USD
+ *   --official-usd-per-request USD --getx-usd-per-request USD
+ *   --pricing-reviewed-at YYYY-MM-DD --spending-cap-confirmed.
+ * The budget estimate is NOT a provider-enforced invoice limit.
  */
-const getxKey = process.env.GETXAPI_KEY;
-const xBearer = process.env.X_API_BEARER_TOKEN;
-if (!getxKey || !xBearer) {
-  if (!getxKey) console.error("GETXAPI_KEY is missing in .env.");
-  if (!xBearer) console.error("X_API_BEARER_TOKEN is missing in .env.");
-  process.exit(1);
-}
-
-const limitIdx = process.argv.indexOf("--limit");
-const limit = limitIdx >= 0 ? Number(process.argv[limitIdx + 1]) || 20 : 20;
+// Fail closed on unknown/malformed flags BEFORE reading credentials or doing I/O.
+const plan = planComparison(process.argv.slice(2), Date.now());
+const limit = plan.limit;
 const OUT_FILE = "data/compare-x.jsonl";
 const PRICES_FILE = "data/prices.jsonl";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -47,7 +45,17 @@ const candidates = complete.filter((r) => !already.has(r.mint));
 const step = Math.max(1, Math.floor(candidates.length / limit));
 const sample = candidates.filter((_, i) => i % step === 0).slice(0, limit);
 
-console.log(`complete mints: ${complete.length}  already compared: ${already.size}  running: ${sample.length}`);
+console.log(`complete mints: ${complete.length}  already compared: ${already.size}  planned: ${sample.length}`);
+if (!plan.execute) {
+  console.log("DRY RUN ONLY — no API requests, credentials, output files or paid charges.");
+  process.exit(0);
+}
+console.log(`OPERATOR-ATTESTED price ceilings, estimated maximum: ${plan.estimatedMaxUsd?.toFixed(6)}; actual provider billing is NOT verifiable here.`);
+const getxKey = process.env.GETXAPI_KEY;
+const xBearer = process.env.X_API_BEARER_TOKEN;
+if (!getxKey || !xBearer) {
+  throw new Error("Live --execute needs two current provider credentials; never reuse exposed keys.");
+}
 mkdirSync("data", { recursive: true });
 
 for (const row of sample) {
@@ -67,9 +75,9 @@ for (const row of sample) {
 
   if (!gxRes.ok || !xcRes.ok) {
     console.log(`${row.symbol ?? row.mint}: error getxapi=${gxRes.status} official=${xcRes.status}`);
-    if (gxRes.status === 401 || gxRes.status === 402 || xcRes.status === 403 || xcRes.status === 401) break;
-    await sleep(1_500);
-    continue;
+    // Any provider error may still be billable. Abort the entire run rather
+    // than continuing attempts with an unknown quota, balance or policy.
+    break;
   }
 
   const gxPage = parseGetXApiPage(await gxRes.json());
@@ -86,6 +94,9 @@ for (const row of sample) {
     ret60m: row.returns.atMin["60"] ?? null,
     getxapi: gx,
     officialCounts: xc,
+    getxPageIncomplete: gxPage.hasMore,
+    officialPageIncomplete: xcPage.nextToken !== null,
+    comparability: "not_established" as const, // one GetX latest page != X counts window
   };
   appendFileSync(OUT_FILE, JSON.stringify(entry) + "\n");
   console.log(
@@ -103,7 +114,7 @@ if (existsSync(OUT_FILE)) {
   const gxZero = all.filter((r) => r.getxapi.beforeCutoff === 0);
   const offPre = all.filter((r) => r.officialCounts.beforeCutoff > 0);
   const offZero = all.filter((r) => r.officialCounts.beforeCutoff === 0);
-  console.log("\n== summary", `n=${all.length}`);
+  console.log("\n== DESCRIPTIVE ONLY, NOT A PROVIDER COVERAGE OR TRADING ALPHA COMPARISON", `n=${all.length}`);
   console.log("getxapi pre>0:", dist(gxPre.map((r) => r.ret60m)), "  pre=0:", dist(gxZero.map((r) => r.ret60m)));
   console.log("official pre>0:", dist(offPre.map((r) => r.ret60m)), "  pre=0:", dist(offZero.map((r) => r.ret60m)));
 }

@@ -24,5 +24,7 @@ jobs:
         run: npm ci
       - name: TypeScript check
         run: npm run build
+      - name: CLI TypeScript check (all scripts, no execution)
+        run: npm run check:cli
       - name: Unit tests (no keys or paid providers)
         run: npm test
