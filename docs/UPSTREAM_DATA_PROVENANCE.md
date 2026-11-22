@@ -19,11 +19,12 @@
 - [TrenchScanner env default](https://github.com/sollama58/TrenchScanner/blob/b4ed579effca13cbc759885686114258d4426ec4/packages/core/src/config/env.ts): `CANDIDATE_OUTCOME_RETENTION_DAYS=90`; `render.yaml` currently declares 90; `.env.example` still shows 60. **Live effective value has not been read.**
 - [cleanup job](https://github.com/sollama58/TrenchScanner/blob/b4ed579effca13cbc759885686114258d4426ec4/apps/worker/src/jobs/cleanupJob.ts) keeps some selected winners/calls longer while pruning old baseline rows. A long export window (API allows up to 180 days) does **not** imply 180 days of unbiased cohort data.
 - A partner `paths` response can include outcome-anchored trajectories but that does **not** authorize reading all `CandidateOutcome.features`.
+- Some rows' `candidateOutcomeId` link survives the alert, but its source `CandidateOutcome` may be pruned. A successful alert/path export is **not evidence** of a complete unselected denominator.
 - Request actual earliest/latest complete windows and a producer-side by-kind count; do not infer completeness solely from one returned file or a HTTP 200.
 
 ## Files searched / availability
 
-- XScanner Draft PR #9 tree at `339181b`: no `data/prices.jsonl` or `data/compare-x.jsonl`; `main` remains a small scaffold. The aggregated 2026-11-14 E7 result in `docs/EXPERIMENTS.md` is **not** a reconstructible row-level dataset.
+- XScanner Draft PR #9 tree at `339181b`, initial Hermes branch `3a1e91d`, archived Claude branch `a7c2fa6`, and X0 reconciliation branch `3251996`: no `data/prices.jsonl` or `data/compare-x.jsonl` in the **inspected Git trees**; `main` remains a small scaffold. The aggregated 2026-11-14 E7 result in `docs/EXPERIMENTS.md` is **not** a reconstructible row-level dataset.
 - Targeted connected Drive metadata search for `XScanner` and `compare-x`: no matches at inspection. This **does not prove** that private files are absent from local disks, unindexed Drive files or partner storage.
 - Never upload operator-exported raw rows, keys, identifying accounts, private partner data or unlicensed source fixtures to this **public** GitHub repo.
 
@@ -31,7 +32,7 @@
 
 **Step 0 — metadata only, no export yet:** ask the owner whether a one-week window (proposed 2026-11-15 to 2026-11-22 UTC) has sufficiently complete `CandidateOutcome` rows, and confirm current runtime revision/retention, counts by `sampleKind` and finalized status, null fractions for `features` / `seatScores` / `seatCalls`, link rates via `candidateOutcomeId`, and rights/approved storage. Identify which timestamps document when TokenSage read data were available to a model. Only aggregate metadata is necessary for this first feasibility answer.
 
-**Step 1 — if approved by owner:** small private JSONL sample from `outcomes` for `sampleKind=event,second,entry` (do not silently mix `hourly`), with fields limited to `id`, `mintAddress`, `sampleKind`, `anchorAt`, `features` (whitelisted), `seatScores`, `seatCalls`, `labelRule`, `finalizedAt` and only the outcome fields needed for the prespecified comparison. A small authorized `alerts` join can link actual emissions; never reconstruct candidate identity from mint alone. For P-only observations, a separate partner-approved `alerts`/`paths` export is a **different** dataset and must stay labeled P.
+**Step 1 — if approved by owner:** small private JSONL sample from `outcomes` for `sampleKind=event,second,entry` (do not silently mix `hourly`), **projected/redacted on the operator side before any sharing**: the existing `/stats/export` endpoint does not expose a per-column projection filter. Limit the shared payload to `id`, `mintAddress`, `sampleKind`, `anchorAt`, `features` (whitelisted), `seatScores`, `seatCalls`, `labelRule`, `finalizedAt` and only the outcome fields needed for the prespecified comparison. A small authorized `alerts` join can link actual emissions; never reconstruct candidate identity from mint alone. For P-only observations, a separate partner-approved `alerts`/`paths` export is a **different** dataset and must stay labeled P.
 
 **Step 2 — provenance manifest:** provider/source revision, export query window (UTC), executed query/filters/limit, row count by kind, expected-vs-returned row totals, privacy/rights approval reference stored privately, extraction and available timestamps, SHA256 of private canonical files, completeness declaration, schema/feature-version checks and retention constraints. Public GitHub receives only redacted schema, aggregate counts, code and non-sensitive hashes.
 
