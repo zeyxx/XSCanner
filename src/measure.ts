@@ -29,7 +29,51 @@ export type MeasureDeps = {
 
 const MINT_BASE_SIZE = 82;
 const TOKEN_ACCOUNT_BASE_SIZE = 165;
+const TOKEN_2022_TLV_START = TOKEN_ACCOUNT_BASE_SIZE + 1;
 const TOKEN_2022_MINT_TYPE = 1;
+const MULTISIG_SIZE = 355;
+
+// ExtensionType values from the Solana token-2022 interface enum, as reviewed
+// 2026-11-22. Unknown future and account-only extensions fail closed until
+// independently checked; this is not a semantic decoder of extension values.
+const TOKEN_2022_MINT_EXTENSIONS = new Set([
+  1, 3, 4, 6, 9, 10, 12, 14, 16, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28,
+]);
+const KNOWN_FIXED_EXTENSION_LENGTHS = new Map([
+  [3, 32], // MintCloseAuthority: OptionalNonZeroPubkey
+  [9, 0],  // NonTransferable marker
+  [18, 64], // MetadataPointer: authority + metadata address
+]);
+
+/**
+ * Reject truncated or contradictory Token-2022 extension headers BEFORE a
+ * provider request. TLV starts at 166; u16 type and u16 payload length are LE.
+ * Uninitialized (type 0) may mark zero-filled free space.
+ */
+function validMintTlv(data: Uint8Array): boolean {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const seen = new Set<number>();
+  let offset = TOKEN_2022_TLV_START;
+  while (offset < data.length) {
+    // The Token-2022 parser tolerates a final byte during realloc.
+    if (data.length - offset === 1) return data[offset] === 0;
+    const type = view.getUint16(offset, true);
+    if (type === 0) {
+      return data.subarray(offset).every((byte) => byte === 0);
+    }
+    if (data.length - offset < 4 || !TOKEN_2022_MINT_EXTENSIONS.has(type) || seen.has(type)) {
+      return false;
+    }
+    const valueLength = view.getUint16(offset + 2, true);
+    const expectedLength = KNOWN_FIXED_EXTENSION_LENGTHS.get(type);
+    if (expectedLength !== undefined && valueLength !== expectedLength) return false;
+    const next = offset + 4 + valueLength;
+    if (next > data.length) return false;
+    seen.add(type);
+    offset = next;
+  }
+  return true;
+}
 
 /**
  * Conservative structural check of the canonical SPL Mint base layout.
@@ -60,15 +104,15 @@ export function isMint(account: AccountRead): boolean {
   // Token-2022 mints without extensions share the 82-byte base layout.
   if (data.length === MINT_BASE_SIZE) return true;
 
-  // Token-2022 extended mints are padded to the Account base size, then
-  // carry an AccountType byte (1=Mint, 2=TokenAccount) at offset 165.
-  // Reject arbitrary extra bytes and ambiguous 165-byte token accounts.
-  if (data.length <= TOKEN_ACCOUNT_BASE_SIZE + 1 ||
+  // Extended Token-2022 mints have 83 bytes of zero padding, then the
+  // AccountType.Mint tag at byte 165, followed by zero or more TLV records.
+  // An extension-free 166-byte mint is valid; 355 bytes is reserved for multisig.
+  if (data.length < TOKEN_2022_TLV_START || data.length === MULTISIG_SIZE ||
       data[TOKEN_ACCOUNT_BASE_SIZE] !== TOKEN_2022_MINT_TYPE) return false;
   for (let i = MINT_BASE_SIZE; i < TOKEN_ACCOUNT_BASE_SIZE; i++) {
     if (data[i] !== 0) return false;
   }
-  return true;
+  return validMintTlv(data);
 }
 
 type ParsedCounts =
