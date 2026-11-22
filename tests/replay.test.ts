@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseXCountsPage } from "../src/adapters/x-counts.js";
 import { assessP0Replay, type P0ReplayRow } from "../src/experiment/replay.js";
 
 const minute = (s: string) => Date.parse(s);
 const t0 = minute("2026-11-22T16:01:00Z");
 const decision = minute("2026-11-22T16:01:10Z");
-const page = (counts: number[]) => parseXCountsPage({
+const rawBody = (counts: number[]) => ({
   data: counts.map((count, i) => ({
     start: new Date(t0 - 120_000 + i * 60_000).toISOString(),
     end: new Date(t0 - 60_000 + i * 60_000).toISOString(),
@@ -14,7 +13,7 @@ const page = (counts: number[]) => parseXCountsPage({
   meta: { total_tweet_count: counts.reduce((a, b) => a + b, 0) },
 });
 const observed = (counts: number[], overrides: Record<string, number | null> = {}) => ({
-  page: page(counts),
+  rawResponse: rawBody(counts),
   acquisition: {
     requestStartedAtMs: overrides.requestStartedAtMs ?? decision - 8_000,
     responseReceivedAtMs: overrides.responseReceivedAtMs ?? decision - 4_000,
@@ -85,13 +84,38 @@ describe("P0 replay evidence admission (synthetic-only)", () => {
 
   it("keeps incomplete pages and window gaps unknown rather than treating them as zero", () => {
     const incomplete = observed([0, 0]);
-    incomplete.page.nextToken = "next";
+    incomplete.rawResponse = {
+      ...incomplete.rawResponse,
+      meta: { ...incomplete.rawResponse.meta, next_token: "next" },
+    };
     const gap = observed([0]);
     const result = assessP0Replay([row("more", incomplete), row("gap", gap)]);
     expect(result).toMatchObject({ pointInTimeX: 0, notAdmissibleX: 2 });
     expect(result.decisions.map((x) => x.reason)).toEqual([
       "pagination_incomplete", "incomplete_window_coverage",
     ]);
+  });
+
+  it("refuses absent metadata, a mismatched total and malformed raw bins", () => {
+    const valid = observed([0, 1]);
+    const cases = [
+      { ...valid.rawResponse, meta: undefined },
+      { ...valid.rawResponse, meta: { total_tweet_count: 0 } },
+      { ...valid.rawResponse, data: [
+        valid.rawResponse.data[0],
+        { ...valid.rawResponse.data[1], tweet_count: -1 },
+      ] },
+      { ...valid.rawResponse, data: [
+        valid.rawResponse.data[0],
+        { ...valid.rawResponse.data[1], tweet_count: 1.5 },
+      ] },
+    ];
+    for (const rawResponse of cases) {
+      const result = assessP0Replay([row("invalid", { ...valid, rawResponse })]);
+      expect(result.decisions[0]).toMatchObject({
+        status: "not_admissible", reason: "invalid_raw_counts", mentions: null,
+      });
+    }
   });
 
   it("rejects duplicate candidate moments, invalid time order and non-descriptive outcomes", () => {
