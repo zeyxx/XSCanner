@@ -117,7 +117,7 @@ describe("point-in-time eligibility of official X counts", () => {
       responseReceivedAtMs: windowStart + 30_000,
       requestStartedAtMs: windowStart + 20_000,
       decisionAtMs: windowStart + 40_000,
-    }).status).toBe("not_admissible");
+    })).toEqual({ status: "not_admissible", reason: "future_or_unclosed_window" });
   });
 
   it("treats the response timestamp as admissible on the exact decision boundary", () => {
