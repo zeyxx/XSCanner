@@ -35,6 +35,19 @@ Compare B vs A, C vs A, D vs B, D vs C. Report each separately.
 - X counts: bins strictly before `t0 + latency`. Counts endpoint, minute bins. Recent window is 7 days, so historical alerts older than 7 days need full-archive counts (priced separately, $0.010 per request per docs read 2026-11-06). Verify the price on the date of the test.
 - Mint attribution: a string counts as a mint only after the account check (`docs/EXPERIMENTS.md` E3 and E4).
 
+## Temporal feasibility countertests (X0 proposal, 2026-11-22)
+
+These controls are required **before** turning descriptive E7 returns into a strategy metric. They do not rewrite E7 or authorize a provider call.
+
+1. **Event timestamp vs availability timestamp.** Record separately `t0` (TrenchScanner alert), X post/bin end time, API request time, API response time, and the time a feature could have been used. An X mention originally posted before `t0` but recovered retrospectively does **not** establish that it was queryable with the same completeness before the decision.
+2. **Decision-time comparability.** Define a decision instant `t_decision = t0 + measured pipeline latency`. Distinguish any common-latency comparison from arm-specific latency comparisons; the latter change both information and possible market entry time. No arm may use data unavailable at its own declared decision instant.
+3. **Entry price is not the candle open containing `t0`.** The current `src/prices/returns.ts` uses the **open of the minute bar containing `t0`** for descriptive returns. That open can precede the alert. For an *executable strategy* outcome, predefine an entry quote/price observable no earlier than `t_decision`, plus spreads, fees, slippage, liquidity, failed fills and price impact. If these cannot be measured, label the metric **descriptive price-path return**, never tradable PnL or expected profitability.
+4. **Same cohort and missingness.** Keep every eligible alert in the denominator for each arm, mark unknown/unavailable features explicitly, and report missingness and abstention. The mint-address-only search misses ticker/name and linked-post discussions; do not equate no matching mint string with no social attention.
+5. **No TokenSage substitution.** Without anchored historical TokenSage features from the operator, arms B and D remain **NOT_EVALUABLE**. A vs C alone cannot answer whether X improves on TokenSage; no post-hoc current narrative read is an acceptable replacement.
+6. **Prespecified uncertainty.** The 30-mint E7 sample is exploratory. Fix the holdout, regime/window, minimum effective sample and statistical uncertainty method **before** any new comparison; a high peak return or one positive slice is not evidence of realized alpha.
+
+**Outcome of X0:** approve a bounded offline/prospective comparison with defensible time semantics and permissioned sources, or record a NO-GO with the blocking evidence. Nothing here authorizes paid X requests, use of an exposed credential, partner data export, trading, merging or deploying.
+
 ## Costs to include
 
 - X data cost per alert, from the console, not from docs alone. Balance reads are in cents, so batch enough requests to see the delta.
