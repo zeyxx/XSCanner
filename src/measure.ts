@@ -46,6 +46,24 @@ const KNOWN_FIXED_EXTENSION_LENGTHS = new Map([
 ]);
 
 /**
+ * Combination constraints from spl-token-2022-interface v4.0.0,
+ * ExtensionType::check_for_invalid_mint_extension_combinations.
+ * TLV values are NOT fully decoded by this gate.
+ */
+function validMintExtensionCombination(types: ReadonlySet<number>): boolean {
+  const transferFee = types.has(1);
+  const confidentialTransfer = types.has(4);
+  const confidentialFee = types.has(16);
+  const confidentialMintBurn = types.has(24);
+  if (confidentialFee && !(transferFee && confidentialTransfer)) return false;
+  if (transferFee && confidentialTransfer && !confidentialFee) return false;
+  if (confidentialMintBurn && !confidentialTransfer) return false;
+  if (types.has(25) && types.has(10)) return false; // scaled UI + interest-bearing
+  if (types.has(9) && confidentialTransfer && !confidentialMintBurn) return false;
+  return true;
+}
+
+/**
  * Reject truncated or contradictory Token-2022 extension headers BEFORE a
  * provider request. TLV starts at 166; u16 type and u16 payload length are LE.
  * Uninitialized (type 0) may mark zero-filled free space.
@@ -56,10 +74,10 @@ function validMintTlv(data: Uint8Array): boolean {
   let offset = TOKEN_2022_TLV_START;
   while (offset < data.length) {
     // The Token-2022 parser tolerates a final byte during realloc.
-    if (data.length - offset === 1) return data[offset] === 0;
+    if (data.length - offset === 1) return data[offset] === 0 && validMintExtensionCombination(seen);
     const type = view.getUint16(offset, true);
     if (type === 0) {
-      return data.subarray(offset).every((byte) => byte === 0);
+      return data.subarray(offset).every((byte) => byte === 0) && validMintExtensionCombination(seen);
     }
     if (data.length - offset < 4 || !TOKEN_2022_MINT_EXTENSIONS.has(type) || seen.has(type)) {
       return false;
@@ -72,7 +90,7 @@ function validMintTlv(data: Uint8Array): boolean {
     seen.add(type);
     offset = next;
   }
-  return true;
+  return validMintExtensionCombination(seen);
 }
 
 /**

@@ -193,6 +193,48 @@ describe("Token-2022 TLV structure (synthetic, no RPC)", () => {
     return data;
   };
 
+  // These deliberately synthetic TLV entries have zero-length bodies except
+  // the known fixed-size fields. They test ONLY the extension-combination
+  // admission rule, not the validity of each extension's packed state.
+  const combinationFixture = (types: number[], trailingZeroBytes = 0): Uint8Array => {
+    const data = mintBytes(166 + types.length * 4 + trailingZeroBytes);
+    const view = new DataView(data.buffer);
+    for (let i = 0; i < types.length; i++) {
+      view.setUint16(166 + i * 4, types[i]!, true);
+      view.setUint16(168 + i * 4, 0, true);
+    }
+    return data;
+  };
+
+  it("rejects five invalid mint extension combinations from the Rust reference", () => {
+    const invalidCombinations = [
+      [16],            // confidential fee requires transfer fee + confidential transfer
+      [1, 4],          // fee + confidential transfer requires confidential fee
+      [24],            // confidential mint burn requires confidential transfer
+      [10, 25],        // scaled UI amount and interest-bearing are incompatible
+      [9, 4],          // non-transferable + confidential transfer requires mint burn
+    ];
+    for (const types of invalidCombinations) {
+      expect(isMint(token2022(combinationFixture(types)))).toBe(false);
+    }
+  });
+
+  it("applies combination checks at the Uninitialized sentinel and one-byte realloc tail", () => {
+    const incompatible = [1, 4];
+    expect(isMint(token2022(combinationFixture(incompatible, 5)))).toBe(false);
+    expect(isMint(token2022(combinationFixture(incompatible, 1)))).toBe(false);
+  });
+
+  it("accepts structurally valid compatible known-length extensions", () => {
+    const data = mintBytes(166 + 4 + 32 + 4 + 64);
+    const view = new DataView(data.buffer);
+    view.setUint16(166, 3, true); // MintCloseAuthority
+    view.setUint16(168, 32, true);
+    view.setUint16(202, 18, true); // MetadataPointer
+    view.setUint16(204, 64, true);
+    expect(isMint(token2022(data))).toBe(true);
+  });
+
   it("accepts extension-free 166-byte mint and well-formed mint-only extensions", () => {
     expect(isMint(token2022(mintBytes(166)))).toBe(true);
     expect(isMint(token2022(tlvMint(3, 32)))).toBe(true); // MintCloseAuthority
