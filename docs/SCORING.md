@@ -4,7 +4,7 @@ Two layers. Do not merge them.
 
 His target formula is in `docs/GUIDELINE.md` sections 5 and 6. It is not implemented.
 
-The code in `src/domain/services/` computes something else. That something else is a draft. It is not his score.
+A **removed historical prototype** formerly under `src/domain/services/` computed different fields. That directory is **absent from the current experimental Git tree**, so the table below is a retrospective explanation, **not a description of running or current code**. The present branch contains counts and price-analysis primitives; no 0–100 composite scoring service is implemented.
 
 ## His target (not implemented)
 
@@ -27,9 +27,9 @@ Flags he names: raid, paid boost, mayhem, KOL cluster, bundled launch, LLM-bot t
 
 Validation he requires: a labeled set, lead/lag against buyers, graduation and rug outcomes. Not done. Do not claim the score means something.
 
-## What the code actually computes
+## What the removed draft computed (historical; NOT current code)
 
-| Field | Code today | Relation to his brief |
+| Field | Retired draft behavior (no longer in Git tree) | Relation to the standalone brief |
 |---|---|---|
 | `mentions` | post count | Reference count only. He says this is not the main signal. |
 | `effective_voices` | clusters of similar post text (TF-IDF cosine, threshold 0.8) | Not his method. Not unique-author count either. |
@@ -42,7 +42,7 @@ Validation he requires: a labeled set, lead/lag against buyers, graduation and r
 
 `docs/SCORING.md` previously marked unique-author count and span velocity as implemented. That description was already stale when the clustering landed. Both descriptions are retired.
 
-## Rules while the draft remains
+## Rules before implementing future scoring
 
 - Do not add the draft fields to his score.
 - Do not fill `cohort_percentile` to look complete.

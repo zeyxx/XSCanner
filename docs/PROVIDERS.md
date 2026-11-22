@@ -46,12 +46,14 @@
 - **Query params**: `q` (required, supports X search operators), `product` (`Latest` or `Top`, default `Latest`), `cursor` (pagination)
 - **Response**: `{ query, tweet_count, has_more, next_cursor, tweets: [{ id, text, createdAt, likeCount, retweetCount, replyCount, quoteCount, author: { id, userName, followers, ... } }] }` (~20 tweets per page)
 - **Pricing (web search summary 2026-11-13, [verify])**: Pay-per-call, no monthly subscription required. Standard read calls ~$0.001 per call (~20 tweets per page, ~$0.05/1k tweets). Free trial credit (~$0.10) reported.
-- **Status**: Adapter & 1-call probe ready (`src/adapters/getxapi.ts`, `scripts/probe-getxapi.ts`). Not yet run live.
+- **Status (code vs experiment)**: Adapter and probe source files exist (`src/adapters/getxapi.ts`, `scripts/probe-getxapi.ts`). The dated E7 ledger in `docs/EXPERIMENTS.md` reports **30 GetXAPI requests on 2026-11-14** alongside official X counts. This does **not** establish ongoing endpoint availability, completeness, data rights or production readiness.
 - **ToS**: Third-party service (does not require an official X developer account). Note `docs/GUIDELINE.md` §4.1: Official X API is the only ToS-clean route; third-party providers carry scraping / supply risk.
 
-## Bugs Found & Fixed
+## Historical adapter bugs and fixes (not evidence the modules remain on this branch)
 
-| Adapter | Bug | Fix |
+These entries document **past experiments/drafts**. The current Git tree contains `src/adapters/getxapi.ts` and `src/adapters/x-counts.ts`; XOfficial, TwitterAPI.io and SocialData live post adapters named here are **not present as deployable modules**. Do not infer a working provider implementation from this table.
+
+| Adapter | Bug | Historical fix reported |
 |---|---|---|
 | XOfficial | Missing `expansions=author_id` → `includes.users` empty → authorHandle/authorFollowers always empty/0 | Added `expansions: 'author_id'` |
 | XOfficial | `max_results` not clamped to [10, 100] → API rejects values outside range | Clamped with `Math.min(Math.max(limit ?? 10, 10), 100)` |
@@ -66,4 +68,4 @@
 - **TwitterAPI.io**: Third-party service. Pay per item. No explicit scraping restrictions beyond service ToS.
 - **SocialData**: Third-party service. Pay per result. 120 req/min shared limit. No explicit scraping restrictions.
 
-All three are API-based (not scraping). Compliant with X ToS as long as we use the APIs as intended (no bulk data resale, no spam, etc.).
+**Compliance status: NOT VERIFIED (2026-11-22).** Calling a third-party API does **not** establish that the provider obtained X data with authorization or that our intended collection, retention, redistribution and commercial use satisfy X's terms. Before any new live ingestion, confirm current provider contractual rights, X developer terms where applicable, retention limits, user privacy and restrictions on republication. Pricing and rate limits above are dated observations, not guaranteed current terms. Offline fixtures require no provider access.
